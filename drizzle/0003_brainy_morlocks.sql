@@ -1,0 +1,1 @@
+ALTER TABLE "scans" ADD COLUMN "consumed" boolean DEFAULT false NOT NULL;
