@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* BACKGROUND: gray-50 (#f9fafb) 
+     C'est la couleur de fond standard pour les apps modernes (Linear, Vercel).
+     Cela permet aux cartes blanches (bg-white) de ressortir. */
+  --background: #f9fafb;
+
+  /* FOREGROUND: gray-900 (#111827)
+     Un gris très foncé, plus doux que le noir pur (#000000) pour la lecture. */
+  --foreground: #111827;
 }
 
 @theme inline {
@@ -12,15 +18,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* J'ai retiré le block @media dark pour forcer le design épuré */
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+
+  /* Optionnel : Lissage des polices pour un rendu plus net sur MacOS/iOS */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

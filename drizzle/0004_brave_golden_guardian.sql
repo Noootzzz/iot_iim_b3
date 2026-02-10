@@ -1,0 +1,1 @@
+ALTER TABLE "scans" ADD COLUMN "revoked" boolean DEFAULT false NOT NULL;
