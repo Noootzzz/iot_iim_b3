@@ -3,14 +3,14 @@
 import { useRfidPolling } from "@/hooks/useRfidPolling";
 import { Scan, Users, CheckCircle, Wifi } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 
 interface ConnectedPlayer {
   id: string;
   username: string;
 }
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -181,5 +181,13 @@ export default function Home() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Chargement...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
