@@ -21,7 +21,7 @@ async function getKey(secret: string): Promise<CryptoKey> {
   );
 }
 
-function b64url(buf: ArrayBuffer): string {
+function b64url(buf: ArrayBuffer | Uint8Array): string {
   return Buffer.from(buf)
     .toString("base64")
     .replace(/\+/g, "-")
