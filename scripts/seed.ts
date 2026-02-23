@@ -4,19 +4,24 @@ import { neon } from "@neondatabase/serverless";
 const sql = neon(process.env.DATABASE_URL!);
 
 async function seed() {
-  console.log("Seeding Demo users...");
+  console.log("Seeding users...");
 
-  // Demo Bob
-  await sql`INSERT INTO users (id, username) VALUES (
-    'c752edcc-b731-458d-8c22-db44d7111e9f', 'Demo Bob'
-  ) ON CONFLICT (id) DO NOTHING`;
+  // Demo Bob (role: user)
+  await sql`INSERT INTO users (id, username, role) VALUES (
+    'c752edcc-b731-458d-8c22-db44d7111e9f', 'Noot', 'user'
+  ) ON CONFLICT (id) DO UPDATE SET role = 'user'`;
 
-  // Demo Alice
-  await sql`INSERT INTO users (id, username) VALUES (
-    'e2a0407d-6b7e-4adc-9a28-f7ccbebaa009', 'Demo Alice'
-  ) ON CONFLICT (id) DO NOTHING`;
+  // Demo Alice (role: user)
+  await sql`INSERT INTO users (id, username, role) VALUES (
+    'e2a0407d-6b7e-4adc-9a28-f7ccbebaa009', 'SxLaDrill', 'user'
+  ) ON CONFLICT (id) DO UPDATE SET role = 'user'`;
 
-  console.log("✅ Seed complete: Demo Bob, Demo Alice");
+  // Admin (role: admin)
+  await sql`INSERT INTO users (id, username, role) VALUES (
+    'a1b2c3d4-0000-4000-8000-aabbccddeeff', 'Admin', 'admin'
+  ) ON CONFLICT (id) DO UPDATE SET role = 'admin'`;
+
+  console.log("✅ Seed complete: Noot, SxLaDrill, Admin");
 }
 
 seed().catch((e) => {

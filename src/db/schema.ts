@@ -6,8 +6,12 @@ import {
   timestamp,
   boolean,
   uuid,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+
+// --- ENUMS ---
+export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 
 // --- TABLE UTILISATEURS ---
 export const users = pgTable("users", {
@@ -15,6 +19,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   email: text("email").unique(),
   rfidUuid: text("rfid_uuid").unique(),
+  role: userRoleEnum("role").notNull().default("user"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

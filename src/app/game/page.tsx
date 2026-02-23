@@ -36,8 +36,8 @@ function GameContent() {
 
   useEffect(() => {
     if (isLocal) {
-      setUser({ id: "c752edcc-b731-458d-8c22-db44d7111e9f", username: "Demo Bob" });
-      setPlayer2({ id: "e2a0407d-6b7e-4adc-9a28-f7ccbebaa009", username: "Demo Alice" });
+      setUser({ id: "c752edcc-b731-458d-8c22-db44d7111e9f", username: "Noot" });
+      setPlayer2({ id: "e2a0407d-6b7e-4adc-9a28-f7ccbebaa009", username: "SxLaDrill" });
       startTimeRef.current = new Date();
       setGameState("PLAYING");
       return;

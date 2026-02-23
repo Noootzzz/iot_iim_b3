@@ -8,20 +8,6 @@ const IOT_SECRET = process.env.IOT_SECRET || "CHANGE_ME_IN_PROD";
 // POST /api/rfid - Webhook appelé par le Raspberry Pi
 export async function POST(request: NextRequest) {
   try {
-    // Méthode 2 : User-Agent ESP32 (pour le vrai Raspberry)
-    const userAgent = request.headers.get("user-agent") || "";
-    const isFromESP32 = userAgent.includes("ESP32");
-
-    // Autoriser si l'un des deux est valide
-    if (!isFromESP32) {
-      console.log(
-        "RFID Unauthorized - UA:",
-        "UA:",
-        userAgent
-      );
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await request.json();
     const { rfidUuid } = body;
 

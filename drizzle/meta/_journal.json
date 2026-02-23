@@ -8,6 +8,13 @@
       "when": 1771844986797,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771851888932,
+      "tag": "0001_shocking_maddog",
+      "breakpoints": true
     }
   ]
 }
