@@ -22,11 +22,12 @@ async function getKey(secret: string): Promise<CryptoKey> {
 }
 
 function b64url(buf: ArrayBuffer | Uint8Array): string {
-  return Buffer.from(buf)
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  return Buffer.from(bytes)
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
-    .replace(/=/g, "");
+    .replace(/=+$/, "");
 }
 
 function b64urlDecode(s: string): Uint8Array {
@@ -53,8 +54,8 @@ export async function verifyToken(
     const [payloadB64, sigB64] = token.split(".");
     if (!payloadB64 || !sigB64) return null;
 
-    const payloadBytes = b64urlDecode(payloadB64);
-    const sigBytes = b64urlDecode(sigB64);
+    const payloadBytes = new Uint8Array(b64urlDecode(payloadB64));
+    const sigBytes = new Uint8Array(b64urlDecode(sigB64));
     const key = await getKey(getSecret());
 
     const valid = await crypto.subtle.verify(
