@@ -37,11 +37,7 @@
 
 html,
 body {
-  width: 800px;
-  height: 480px;
-  max-width: 800px;
-  max-height: 480px;
-  overflow: hidden;
+  min-height: 100vh;
   background: var(--bg-deep);
   color: var(--text-primary);
   font-family: var(--font-inter), system-ui, sans-serif;

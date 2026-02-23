@@ -25,15 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <head>
-        <meta
-          name="viewport"
-          content="width=800, height=480, initial-scale=1, user-scalable=no"
-        />
-      </head>
-      <body
-        className={`${sora.variable} ${inter.variable} antialiased w-[800px] h-[480px] overflow-hidden`}
-      >
+      <body className={`${sora.variable} ${inter.variable} antialiased`}>
         {children}
       </body>
     </html>

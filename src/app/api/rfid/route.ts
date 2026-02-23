@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, scans } from "@/db/schema";
-import { eq, desc, and, gt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { scanEmitter } from "@/lib/scan-emitter";
 
 const IOT_SECRET = process.env.IOT_SECRET || "CHANGE_ME_IN_PROD";
 
@@ -15,15 +16,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing UUID" }, { status: 400 });
     }
 
-    await db.insert(scans).values({
-      rfidUuid,
-      machineId: machineId || null,
-      consumed: false,
-    });
+    const [inserted] = await db
+      .insert(scans)
+      .values({
+        rfidUuid,
+        machineId: machineId || null,
+        consumed: false,
+      })
+      .returning();
 
     const existingUser = await db.query.users.findFirst({
       where: eq(users.rfidUuid, rfidUuid),
     });
+
+    // Notify all SSE clients instantly
+    scanEmitter.emit("scan", {
+      id: inserted.id,
+      rfidUuid: inserted.rfidUuid,
+      machineId: inserted.machineId || null,
+      known: !!existingUser,
+      user: existingUser || null,
+    });
+
+    // Mark as consumed immediately (SSE already delivered it)
+    await db
+      .update(scans)
+      .set({ consumed: true })
+      .where(eq(scans.id, inserted.id));
 
     return NextResponse.json({
       success: true,
@@ -32,54 +51,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Erreur API RFID POST:", error);
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
-  }
-}
-
-// GET /api/rfid - Polling Frontend
-export async function GET(request: NextRequest) {
-  try {
-    const machineId = request.nextUrl.searchParams.get("machineId");
-    const fiveSecondsAgo = new Date(Date.now() - 5000);
-
-    const conditions = [
-      eq(scans.consumed, false),
-      gt(scans.scannedAt, fiveSecondsAgo),
-    ];
-
-    if (machineId) {
-      conditions.push(eq(scans.machineId, machineId));
-    }
-
-    const latestScan = await db.query.scans.findFirst({
-      where: and(...conditions),
-      orderBy: [desc(scans.scannedAt)],
-    });
-
-    if (!latestScan) {
-      return NextResponse.json({ scan: null });
-    }
-
-    await db
-      .update(scans)
-      .set({ consumed: true })
-      .where(eq(scans.id, latestScan.id));
-
-    const user = await db.query.users.findFirst({
-      where: eq(users.rfidUuid, latestScan.rfidUuid),
-    });
-
-    return NextResponse.json({
-      scan: {
-        id: latestScan.id,
-        rfidUuid: latestScan.rfidUuid,
-        machineId: latestScan.machineId || null,
-        known: !!user,
-        user: user || null,
-      },
-    });
-  } catch (error) {
-    console.error("Erreur API RFID GET:", error);
     return NextResponse.json({ error: "Server Error" }, { status: 500 });
   }
 }

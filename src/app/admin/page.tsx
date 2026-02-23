@@ -5,25 +5,17 @@ import { useRouter } from "next/navigation";
 import {
   Users,
   Swords,
-  Trophy,
   Timer,
   LogOut,
-  Crown,
   Shield,
   Trash2,
   Pencil,
   X,
   Check,
-  TrendingUp,
-  Target,
-  Zap,
-  CalendarDays,
-  UserPlus,
-  BarChart3,
-  Hash,
+  RefreshCw,
 } from "lucide-react";
 
-// ─── Types ───────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────
 interface AdminUser {
   id: string;
   username: string;
@@ -52,34 +44,23 @@ interface AdminSession {
   endedAt: string | null;
 }
 
-interface DayCount {
-  day: string;
-  count: number;
-}
-
 interface Stats {
   totalUsers: number;
   totalSessions: number;
   avgDurationSeconds: number;
-  totalPoints: number;
-  avgScorePerPlayer: number;
-  longestGameSeconds: number;
-  shortestGameSeconds: number;
-  highestScore: number;
-  closestGameDiff: number;
   todaySessions: number;
   weekSessions: number;
   newUsersThisWeek: number;
-  sessionsPerDay: DayCount[];
+  [key: string]: unknown;
 }
 
-type Tab = "stats" | "users" | "sessions";
+type Tab = "overview" | "users" | "sessions";
 
-// ─── Helpers ─────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────
 function fmt(s: number) {
   const m = Math.floor(s / 60);
   const sec = s % 60;
-  return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+  return m > 0 ? `${m}m${sec > 0 ? ` ${sec}s` : ""}` : `${sec}s`;
 }
 
 function fmtDate(d: string | null) {
@@ -101,10 +82,43 @@ function fmtShortDate(d: string | null) {
   });
 }
 
-// ─── Main Component ─────────────────────────────────────────────
+function timeAgo(d: string | null) {
+  if (!d) return "";
+  const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+  if (s < 60) return "à l'instant";
+  if (s < 3600) return `${Math.floor(s / 60)}min`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}j`;
+}
+
+/** Compute per-day counts from sessions (client-side, no API dependency) */
+function buildDailyCounts(sessions: AdminSession[], days: number) {
+  const buckets: Record<string, number> = {};
+  const labels: { key: string; short: string }[] = [];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const short = d.toLocaleDateString("fr-FR", { weekday: "narrow" });
+    buckets[key] = 0;
+    labels.push({ key, short });
+  }
+
+  for (const s of sessions) {
+    if (!s.endedAt) continue;
+    const key = new Date(s.endedAt).toISOString().slice(0, 10);
+    if (key in buckets) buckets[key]++;
+  }
+
+  return labels.map((l) => ({ label: l.short, count: buckets[l.key] }));
+}
+
+// ─── Main ────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("stats");
+  const [tab, setTab] = useState<Tab>("overview");
   const [stats, setStats] = useState<Stats | null>(null);
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   const [allSessions, setAllSessions] = useState<AdminSession[]>([]);
@@ -134,7 +148,7 @@ export default function AdminDashboard() {
       setAllUsers(usersData.users || []);
       setAllSessions(sessionsData.sessions || []);
     } catch {
-      setError("Erreur de chargement des données");
+      setError("Impossible de charger les données.");
     } finally {
       setLoading(false);
     }
@@ -151,87 +165,97 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-400 text-sm">Chargement...</p>
-        </div>
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-neutral-400 text-sm">Chargement…</p>
       </main>
     );
   }
 
   if (error) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-sm border border-red-200 p-8 text-center">
-          <p className="text-red-600">{error}</p>
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-neutral-600 mb-2">{error}</p>
+          <button
+            onClick={() => {
+              setError("");
+              setLoading(true);
+              fetchAll();
+            }}
+            className="text-sm underline text-neutral-500"
+          >
+            Réessayer
+          </button>
         </div>
       </main>
     );
   }
 
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "overview", label: "Vue d'ensemble" },
+    { key: "users", label: `Joueurs (${allUsers.length})` },
+    { key: "sessions", label: `Parties (${allSessions.length})` },
+  ];
+
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <Shield className="text-white w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-slate-900">
-                Administration
-              </h1>
-              <p className="text-xs text-slate-400 -mt-0.5">Tableau de bord</p>
-            </div>
+    <main className="min-h-screen bg-neutral-50 text-neutral-900">
+      <header className="bg-white border-b border-neutral-200 px-6 py-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-neutral-400" />
+            <span className="font-semibold text-sm tracking-tight">
+              Riftbound Admin
+            </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                setLoading(true);
+                fetchAll();
+              }}
+              className="p-2 text-neutral-400 hover:text-neutral-600 rounded transition"
+              title="Rafraîchir"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
             <button
               onClick={() => router.push("/")}
-              className="text-slate-500 hover:text-slate-700 text-sm transition"
+              className="text-neutral-400 hover:text-neutral-600 text-xs px-3 py-2 transition"
             >
-              ← Retour au jeu
+              ← Retour
             </button>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 px-4 py-2 rounded-lg text-sm transition"
+              className="flex items-center gap-1.5 text-neutral-400 hover:text-neutral-600 px-3 py-2 text-xs transition"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
               Déconnexion
             </button>
           </div>
         </div>
       </header>
 
-      {/* Tabs */}
-      <nav className="bg-white border-b border-slate-200 px-6">
-        <div className="max-w-7xl mx-auto flex gap-1">
-          {[
-            { key: "stats" as Tab, label: "Statistiques", icon: BarChart3 },
-            { key: "users" as Tab, label: "Joueurs", icon: Users },
-            { key: "sessions" as Tab, label: "Parties", icon: Swords },
-          ].map(({ key, label, icon: Icon }) => (
+      <div className="bg-white border-b border-neutral-200 px-6">
+        <div className="max-w-6xl mx-auto flex gap-6">
+          {tabs.map((t) => (
             <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition ${
-                tab === key
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`py-3 text-sm border-b-2 transition ${
+                tab === t.key
+                  ? "border-neutral-900 text-neutral-900 font-medium"
+                  : "border-transparent text-neutral-400 hover:text-neutral-600"
               }`}
             >
-              <Icon className="w-4 h-4" />
-              {label}
+              {t.label}
             </button>
           ))}
         </div>
-      </nav>
+      </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto p-6">
-        {tab === "stats" && stats && (
-          <StatsTab
+      <div className="max-w-6xl mx-auto px-6 py-6">
+        {tab === "overview" && stats && (
+          <OverviewTab
             stats={stats}
             users={allUsers}
             sessions={allSessions}
@@ -251,10 +275,8 @@ export default function AdminDashboard() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// ─── STATS TAB ────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════
-function StatsTab({
+// ─── OVERVIEW ────────────────────────────────────────────────
+function OverviewTab({
   stats,
   users,
   sessions,
@@ -265,258 +287,237 @@ function StatsTab({
   sessions: AdminSession[];
   onSwitchTab: (tab: Tab) => void;
 }) {
-  const topPlayers = [...users]
-    .filter((u) => u.role === "user")
-    .sort((a, b) => b.wins - a.wins)
-    .slice(0, 10);
+  const players = users.filter((u) => u.role === "user");
+  const topPlayers = [...players]
+    .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate)
+    .slice(0, 5);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const todaySessions = [...sessions]
-    .filter((s) => s.endedAt && s.endedAt.slice(0, 10) === todayStr)
+  const recentSessions = [...sessions]
     .sort(
       (a, b) =>
         new Date(b.endedAt ?? 0).getTime() - new Date(a.endedAt ?? 0).getTime(),
-    );
+    )
+    .slice(0, 5);
+
+  const daily = buildDailyCounts(sessions, 7);
+  const maxBar = Math.max(...daily.map((d) => d.count), 1);
 
   return (
-    <div className="space-y-6">
-      {/* KPI Row 1 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <KpiCard
-          icon={Users}
-          color="blue"
-          label="Joueurs"
-          value={stats.totalUsers}
-          onClick={() => onSwitchTab("users")}
-        />
-        <KpiCard
-          icon={Swords}
-          color="purple"
-          label="Parties"
-          value={stats.totalSessions}
-          onClick={() => onSwitchTab("sessions")}
-        />
-        <KpiCard
-          icon={Timer}
-          color="green"
-          label="Durée moy."
-          value={fmt(stats.avgDurationSeconds)}
-        />
-        <KpiCard
-          icon={Target}
-          color="yellow"
-          label="Points totaux"
-          value={stats.totalPoints.toLocaleString()}
-        />
-      </div>
-
-      {/* KPI Row 2 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <KpiCard
-          icon={TrendingUp}
-          color="cyan"
-          label="Score moy./joueur"
-          value={stats.avgScorePerPlayer}
-        />
-        <KpiCard
-          icon={Zap}
-          color="red"
-          label="Plus haut score"
-          value={stats.highestScore}
-        />
-        <KpiCard
-          icon={CalendarDays}
-          color="orange"
-          label="Parties aujourd'hui"
-          value={stats.todaySessions}
-          onClick={() => onSwitchTab("sessions")}
-        />
-        <KpiCard
-          icon={UserPlus}
-          color="emerald"
-          label="Nouveaux (semaine)"
-          value={stats.newUsersThisWeek}
-        />
-      </div>
-
-      {/* KPI Row 3 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <KpiCard
-          icon={Timer}
-          color="teal"
-          label="Partie la + longue"
-          value={fmt(stats.longestGameSeconds)}
-        />
-        <KpiCard
-          icon={Zap}
-          color="pink"
-          label="Partie la + courte"
-          value={fmt(stats.shortestGameSeconds)}
-        />
-        <KpiCard
-          icon={Swords}
-          color="indigo"
-          label="Parties (semaine)"
-          value={stats.weekSessions}
-          onClick={() => onSwitchTab("sessions")}
-        />
-        <KpiCard
-          icon={Target}
-          color="amber"
-          label="Écart min."
-          value={`${stats.closestGameDiff} pts`}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Classement */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 lg:col-span-2 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Trophy className="text-amber-500 w-5 h-5" />
-            <h2 className="font-semibold text-base text-slate-800">
-              Classement Joueurs
-            </h2>
+    <div className="space-y-8">
+      {/* KPIs */}
+      <div className="grid grid-cols-4 gap-px bg-neutral-200 rounded-lg overflow-hidden">
+        {[
+          {
+            label: "Joueurs",
+            value: stats.totalUsers,
+            detail:
+              stats.newUsersThisWeek > 0
+                ? `+${stats.newUsersThisWeek} cette sem.`
+                : null,
+            detailColor: "text-emerald-600",
+            valueColor: "",
+          },
+          {
+            label: "Parties",
+            value: stats.totalSessions,
+            detail:
+              stats.weekSessions > 0
+                ? `${stats.weekSessions} cette sem.`
+                : null,
+            detailColor: "text-blue-500",
+            valueColor: "",
+          },
+          {
+            label: "Durée moy.",
+            value: fmt(stats.avgDurationSeconds),
+            detail: null,
+            detailColor: "",
+            valueColor: "",
+          },
+          {
+            label: "Aujourd'hui",
+            value: stats.todaySessions,
+            detail: null,
+            detailColor: "",
+            valueColor: stats.todaySessions > 0 ? "text-emerald-600" : "",
+          },
+        ].map((kpi) => (
+          <div key={kpi.label} className="bg-white p-5">
+            <p className="text-xs text-neutral-400 mb-1">{kpi.label}</p>
+            <p
+              className={`text-2xl font-semibold tabular-nums ${kpi.valueColor}`}
+            >
+              {kpi.value}
+            </p>
+            {kpi.detail && (
+              <p
+                className={`text-[11px] mt-1 ${kpi.detailColor || "text-neutral-400"}`}
+              >
+                {kpi.detail}
+              </p>
+            )}
           </div>
-          {topPlayers.length === 0 ? (
-            <p className="text-slate-400 text-sm">Aucune donnée</p>
-          ) : (
-            <ol className="space-y-0.5">
-              {topPlayers.map((p, i) => {
-                const barWidth =
-                  topPlayers[0].wins > 0
-                    ? (p.wins / topPlayers[0].wins) * 100
-                    : 0;
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Chart */}
+        <div className="lg:col-span-3">
+          <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-3">
+            7 derniers jours
+          </h3>
+          <div className="bg-white border border-neutral-200 rounded-lg p-4">
+            <div className="flex items-end gap-1.5" style={{ height: 120 }}>
+              {daily.map((d, i) => {
+                const h = d.count > 0 ? (d.count / maxBar) * 100 : 0;
                 return (
-                  <li
-                    key={p.id}
-                    className="relative flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-slate-50 transition group"
+                  <div
+                    key={i}
+                    className="flex-1 flex flex-col items-center justify-end h-full"
                   >
-                    {/* Win bar background */}
+                    {d.count > 0 && (
+                      <span className="text-[10px] text-neutral-500 mb-1 tabular-nums">
+                        {d.count}
+                      </span>
+                    )}
                     <div
-                      className="absolute inset-y-0 left-0 rounded-lg opacity-[0.07] transition-all"
+                      className={`w-full rounded-sm ${
+                        d.count > 0 ? "bg-blue-500" : "bg-neutral-100"
+                      }`}
                       style={{
-                        width: `${barWidth}%`,
-                        background:
-                          i === 0
-                            ? "linear-gradient(90deg, #f59e0b, #d97706)"
-                            : i === 1
-                              ? "linear-gradient(90deg, #94a3b8, #64748b)"
-                              : i === 2
-                                ? "linear-gradient(90deg, #f97316, #ea580c)"
-                                : "linear-gradient(90deg, #6366f1, #4f46e5)",
+                        height: d.count > 0 ? `${h}%` : 2,
+                        minHeight: 2,
                       }}
                     />
-                    <div className="flex items-center gap-3 relative z-10">
-                      <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                          i === 0
-                            ? "bg-amber-100 text-amber-600"
-                            : i === 1
-                              ? "bg-slate-200 text-slate-500"
-                              : i === 2
-                                ? "bg-orange-100 text-orange-600"
-                                : "bg-slate-100 text-slate-400"
-                        }`}
-                      >
-                        {i === 0 ? <Crown className="w-3.5 h-3.5" /> : i + 1}
-                      </div>
-                      <span
-                        className={`text-sm font-medium ${
-                          i < 3 ? "text-slate-800" : "text-slate-600"
-                        }`}
-                      >
-                        {p.username}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs relative z-10">
-                      <span className="text-emerald-600 font-semibold">
-                        {p.wins} victoire{p.wins !== 1 ? "s" : ""}
-                      </span>
-                      <span className="text-slate-400">
-                        {p.gamesPlayed} partie{p.gamesPlayed !== 1 ? "s" : ""}
-                      </span>
-                      <span className="text-slate-400">
-                        {p.totalPoints} points cumulés
-                      </span>
-                      <span
-                        className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${
-                          p.winRate >= 60
-                            ? "bg-emerald-50 text-emerald-600"
-                            : p.winRate >= 40
-                              ? "bg-amber-50 text-amber-600"
-                              : "bg-red-50 text-red-600"
-                        }`}
-                      >
-                        {p.winRate}% taux de victoire
-                      </span>
-                    </div>
-                  </li>
+                    <span className="text-[10px] text-neutral-400 mt-1.5 uppercase">
+                      {d.label}
+                    </span>
+                  </div>
                 );
               })}
-            </ol>
-          )}
+            </div>
+          </div>
         </div>
 
-        {/* Parties du jour */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="text-orange-500 w-5 h-5" />
-              <h2 className="font-semibold text-base text-slate-800">
-                Parties du jour
-              </h2>
-            </div>
-            <span className="text-slate-400 text-sm">
-              {todaySessions.length} partie
-              {todaySessions.length !== 1 ? "s" : ""}
-            </span>
+        {/* Top 5 */}
+        <div className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
+              Classement
+            </h3>
+            <button
+              onClick={() => onSwitchTab("users")}
+              className="text-[11px] text-neutral-400 hover:text-neutral-600 underline-offset-2 hover:underline"
+            >
+              Tout voir
+            </button>
           </div>
-          {todaySessions.length === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-6">
-              Aucune partie aujourd&apos;hui
-            </p>
-          ) : (
-            <div className="max-h-80 overflow-y-auto pr-1 space-y-2">
-              {todaySessions.map((s) => (
+          <div className="bg-white border border-neutral-200 rounded-lg divide-y divide-neutral-100">
+            {topPlayers.length === 0 ? (
+              <p className="text-neutral-400 text-sm text-center py-8">
+                Aucun joueur
+              </p>
+            ) : (
+              topPlayers.map((p, i) => (
                 <div
-                  key={s.id}
-                  className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2.5 hover:bg-slate-100 transition space-y-1"
+                  key={p.id}
+                  className="flex items-center justify-between px-4 py-2.5"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm font-medium text-slate-700 truncate">
-                        {s.player1Username}
-                      </span>
-                      <span className="text-indigo-600 font-bold text-sm">
-                        {s.player1Score} – {s.player2Score}
-                      </span>
-                      <span className="text-sm font-medium text-slate-700 truncate">
-                        {s.player2Username}
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`text-xs w-4 tabular-nums text-right font-semibold ${
+                        i === 0
+                          ? "text-amber-500"
+                          : i === 1
+                            ? "text-neutral-400"
+                            : i === 2
+                              ? "text-amber-700"
+                              : "text-neutral-300"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="text-sm text-neutral-800">
+                      {p.username}
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <div className="flex items-center gap-2">
-                      {s.winnerUsername && (
-                        <span className="text-emerald-600">
-                          <Trophy className="w-3 h-3 inline mr-0.5" />
-                          {s.winnerUsername}
-                        </span>
-                      )}
-                      <span>{fmt(s.durationSeconds)}</span>
-                    </div>
-                    <span>
-                      {s.endedAt
-                        ? new Date(s.endedAt).toLocaleTimeString("fr-FR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "—"}
+                  <div className="flex items-center gap-3 text-xs tabular-nums">
+                    <span className="text-emerald-600 font-medium">
+                      {p.wins}v
+                    </span>
+                    <span className="text-neutral-400">{p.gamesPlayed}p</span>
+                    <span
+                      className={`${
+                        p.winRate >= 60
+                          ? "text-emerald-600"
+                          : p.winRate >= 40
+                            ? "text-amber-500"
+                            : "text-neutral-400"
+                      }`}
+                    >
+                      {p.winRate}%
                     </span>
                   </div>
                 </div>
-              ))}
-            </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
+            Dernières parties
+          </h3>
+          <button
+            onClick={() => onSwitchTab("sessions")}
+            className="text-[11px] text-neutral-400 hover:text-neutral-600 underline-offset-2 hover:underline"
+          >
+            Tout voir
+          </button>
+        </div>
+        <div className="bg-white border border-neutral-200 rounded-lg divide-y divide-neutral-100">
+          {recentSessions.length === 0 ? (
+            <p className="text-neutral-400 text-sm text-center py-8">
+              Aucune partie
+            </p>
+          ) : (
+            recentSessions.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between px-4 py-3"
+              >
+                <div className="flex items-center gap-2 text-sm min-w-0">
+                  <span
+                    className={
+                      s.winnerId === s.player1Id
+                        ? "font-medium text-emerald-700"
+                        : "text-neutral-500"
+                    }
+                  >
+                    {s.player1Username}
+                  </span>
+                  <span className="text-neutral-800 font-mono text-xs font-medium tabular-nums">
+                    {s.player1Score}–{s.player2Score}
+                  </span>
+                  <span
+                    className={
+                      s.winnerId === s.player2Id
+                        ? "font-medium text-emerald-700"
+                        : "text-neutral-500"
+                    }
+                  >
+                    {s.player2Username}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-neutral-400 shrink-0">
+                  <span>{fmt(s.durationSeconds)}</span>
+                  <span className="tabular-nums">{timeAgo(s.endedAt)}</span>
+                </div>
+              </div>
+            ))
           )}
         </div>
       </div>
@@ -524,57 +525,7 @@ function StatsTab({
   );
 }
 
-// ─── KPI Card ─────────────────────────────────────────────────
-const colorMap: Record<string, string> = {
-  blue: "bg-blue-50 text-blue-600",
-  purple: "bg-purple-50 text-purple-600",
-  green: "bg-emerald-50 text-emerald-600",
-  yellow: "bg-amber-50 text-amber-600",
-  cyan: "bg-cyan-50 text-cyan-600",
-  red: "bg-red-50 text-red-600",
-  orange: "bg-orange-50 text-orange-600",
-  emerald: "bg-emerald-50 text-emerald-600",
-  teal: "bg-teal-50 text-teal-600",
-  pink: "bg-pink-50 text-pink-600",
-  indigo: "bg-indigo-50 text-indigo-600",
-  amber: "bg-amber-50 text-amber-600",
-};
-
-function KpiCard({
-  icon: Icon,
-  color,
-  label,
-  value,
-  onClick,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-  label: string;
-  value: string | number;
-  onClick?: () => void;
-}) {
-  const [bgClass, textClass] = (colorMap[color] || colorMap.blue).split(" ");
-  return (
-    <div
-      className={`bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 shadow-sm transition ${
-        onClick ? "cursor-pointer hover:shadow-md hover:border-slate-300" : ""
-      }`}
-      onClick={onClick}
-    >
-      <div className={`${bgClass} p-2.5 rounded-lg`}>
-        <Icon className={`${textClass} w-5 h-5`} />
-      </div>
-      <div>
-        <p className="text-slate-400 text-xs font-medium">{label}</p>
-        <p className="text-xl font-bold text-slate-900">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ─── USERS TAB ────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════
+// ─── USERS ───────────────────────────────────────────────────
 function UsersTab({
   users,
   onRefresh,
@@ -591,13 +542,31 @@ function UsersTab({
   const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
-
-  const filtered = users.filter(
-    (u) =>
-      u.username.toLowerCase().includes(search.toLowerCase()) ||
-      (u.email ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      u.id.includes(search),
+  const [roleFilter, setRoleFilter] = useState<"all" | "user" | "admin">("all");
+  const [sortBy, setSortBy] = useState<"name" | "wins" | "winRate" | "games">(
+    "name",
   );
+
+  const filtered = users
+    .filter(
+      (u) =>
+        (u.username.toLowerCase().includes(search.toLowerCase()) ||
+          (u.email ?? "").toLowerCase().includes(search.toLowerCase()) ||
+          u.id.includes(search)) &&
+        (roleFilter === "all" || u.role === roleFilter),
+    )
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "wins":
+          return b.wins - a.wins;
+        case "winRate":
+          return b.winRate - a.winRate;
+        case "games":
+          return b.gamesPlayed - a.gamesPlayed;
+        default:
+          return a.username.localeCompare(b.username);
+      }
+    });
 
   const startEdit = (u: AdminUser) => {
     setEditId(u.id);
@@ -613,7 +582,7 @@ function UsersTab({
     });
     if (res.ok) {
       setEditId(null);
-      setMsg("Utilisateur modifié ✓");
+      setMsg("Modifié");
       setTimeout(() => setMsg(""), 2000);
       await onRefresh();
     }
@@ -624,7 +593,7 @@ function UsersTab({
     setDeleting(id);
     const res = await fetch(`/api/admin/users?id=${id}`, { method: "DELETE" });
     if (res.ok) {
-      setMsg("Utilisateur supprimé ✓");
+      setMsg("Supprimé");
       setTimeout(() => setMsg(""), 2000);
       await onRefresh();
     }
@@ -633,161 +602,185 @@ function UsersTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-base font-semibold flex items-center gap-2 text-slate-800">
-          <Users className="w-5 h-5 text-blue-500" />
-          Gestion des joueurs
-          <span className="text-slate-400 text-sm font-normal">
-            ({users.length})
+      <div className="flex items-center gap-3 flex-wrap">
+        <input
+          type="text"
+          placeholder="Rechercher…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="bg-white border border-neutral-200 rounded-md px-3 py-1.5 text-sm w-56 placeholder-neutral-300 focus:outline-none focus:border-neutral-400"
+        />
+        <select
+          value={roleFilter}
+          onChange={(e) =>
+            setRoleFilter(e.target.value as "all" | "user" | "admin")
+          }
+          className="bg-white border border-neutral-200 rounded-md px-2.5 py-1.5 text-sm text-neutral-600 focus:outline-none focus:border-neutral-400"
+        >
+          <option value="all">Tous les rôles</option>
+          <option value="user">Joueurs</option>
+          <option value="admin">Admins</option>
+        </select>
+        <select
+          value={sortBy}
+          onChange={(e) =>
+            setSortBy(e.target.value as "name" | "wins" | "winRate" | "games")
+          }
+          className="bg-white border border-neutral-200 rounded-md px-2.5 py-1.5 text-sm text-neutral-600 focus:outline-none focus:border-neutral-400"
+        >
+          <option value="name">Tri : Nom</option>
+          <option value="wins">Tri : Victoires ↓</option>
+          <option value="winRate">Tri : Win% ↓</option>
+          <option value="games">Tri : Parties ↓</option>
+        </select>
+        {(search || roleFilter !== "all" || sortBy !== "name") && (
+          <button
+            onClick={() => {
+              setSearch("");
+              setRoleFilter("all");
+              setSortBy("name");
+            }}
+            className="text-xs text-neutral-400 hover:text-neutral-600 underline underline-offset-2 transition"
+          >
+            Réinitialiser
+          </button>
+        )}
+        <span className="text-xs text-neutral-400 ml-auto">
+          {filtered.length} résultat{filtered.length !== 1 ? "s" : ""}
+        </span>
+        {msg && (
+          <span
+            className={`text-xs ${msg === "Supprimé" ? "text-red-500" : "text-emerald-500"}`}
+          >
+            {msg}
           </span>
-        </h2>
-        {msg && <span className="text-emerald-600 text-sm">{msg}</span>}
+        )}
       </div>
 
-      <input
-        type="text"
-        placeholder="Rechercher (nom, email, id)..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full sm:w-80 bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 shadow-sm"
-      />
-
-      <div className="overflow-x-auto bg-white border border-slate-200 rounded-xl shadow-sm">
+      <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-slate-400 text-xs uppercase border-b border-slate-100">
-              <th className="text-left py-3 px-4">Joueur</th>
-              <th className="text-left py-3 px-2">Email</th>
-              <th className="text-left py-3 px-2">RFID</th>
-              <th className="text-center py-3 px-2">Rôle</th>
-              <th className="text-center py-3 px-2">Parties</th>
-              <th className="text-center py-3 px-2">Victoires</th>
-              <th className="text-center py-3 px-2">Win%</th>
-              <th className="text-center py-3 px-2">Points</th>
-              <th className="text-left py-3 px-2">Inscrit le</th>
-              <th className="text-right py-3 px-4">Actions</th>
+            <tr className="text-xs text-neutral-400 border-b border-neutral-100">
+              <th className="text-left py-2.5 px-4 font-medium">Nom</th>
+              <th className="text-left py-2.5 px-3 font-medium">RFID</th>
+              <th className="text-center py-2.5 px-3 font-medium">Rôle</th>
+              <th className="text-center py-2.5 px-3 font-medium">Parties</th>
+              <th className="text-center py-2.5 px-3 font-medium">Victoires</th>
+              <th className="text-center py-2.5 px-3 font-medium">Win%</th>
+              <th className="text-left py-2.5 px-3 font-medium">Inscrit</th>
+              <th className="text-right py-2.5 px-4 font-medium"></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-neutral-50">
             {filtered.map((u) => (
-              <tr
-                key={u.id}
-                className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition"
-              >
+              <tr key={u.id} className="hover:bg-neutral-50/50">
                 {editId === u.id ? (
                   <>
                     <td className="py-2 px-4">
                       <input
                         value={editData.username}
                         onChange={(e) =>
-                          setEditData({ ...editData, username: e.target.value })
+                          setEditData({
+                            ...editData,
+                            username: e.target.value,
+                          })
                         }
-                        className="bg-white border border-slate-300 rounded px-2 py-1 text-sm w-28 focus:outline-none focus:border-indigo-400"
+                        className="border border-neutral-300 rounded px-2 py-0.5 text-sm w-28 focus:outline-none focus:border-neutral-500"
                       />
                     </td>
-                    <td className="py-2 px-2">
-                      <input
-                        value={editData.email}
-                        onChange={(e) =>
-                          setEditData({ ...editData, email: e.target.value })
-                        }
-                        className="bg-white border border-slate-300 rounded px-2 py-1 text-sm w-36 focus:outline-none focus:border-indigo-400"
-                      />
+                    <td className="py-2 px-3 text-neutral-400 text-xs font-mono">
+                      {u.rfidUuid ? u.rfidUuid.slice(0, 8) : "—"}
                     </td>
-                    <td className="py-2 px-2 text-slate-400 text-xs font-mono">
-                      {u.rfidUuid ? u.rfidUuid.slice(0, 8) + "…" : "—"}
-                    </td>
-                    <td className="py-2 px-2 text-center">
+                    <td className="py-2 px-3 text-center">
                       <select
                         value={editData.role}
                         onChange={(e) =>
                           setEditData({ ...editData, role: e.target.value })
                         }
-                        className="bg-white border border-slate-300 rounded px-1 py-1 text-xs focus:outline-none focus:border-indigo-400"
+                        className="border border-neutral-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:border-neutral-500"
                       >
                         <option value="user">user</option>
                         <option value="admin">admin</option>
                       </select>
                     </td>
-                    <td className="text-center py-2 px-2 text-slate-600">
+                    <td className="text-center py-2 px-3 text-neutral-500">
                       {u.gamesPlayed}
                     </td>
-                    <td className="text-center py-2 px-2 text-slate-600">
+                    <td className="text-center py-2 px-3 text-neutral-500">
                       {u.wins}
                     </td>
-                    <td className="text-center py-2 px-2 text-slate-600">
+                    <td className="text-center py-2 px-3 text-neutral-500">
                       {u.winRate}%
                     </td>
-                    <td className="text-center py-2 px-2 text-slate-600">
-                      {u.totalPoints}
-                    </td>
-                    <td className="py-2 px-2 text-slate-400 text-xs">
+                    <td className="py-2 px-3 text-neutral-400 text-xs">
                       {fmtShortDate(u.createdAt)}
                     </td>
-                    <td className="text-right py-2 px-4 flex gap-1 justify-end">
-                      <button
-                        onClick={saveEdit}
-                        className="p-1.5 bg-emerald-500 hover:bg-emerald-600 rounded text-white"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setEditId(null)}
-                        className="p-1.5 bg-slate-200 hover:bg-slate-300 rounded text-slate-500"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                    <td className="text-right py-2 px-4">
+                      <div className="flex gap-1 justify-end">
+                        <button
+                          onClick={saveEdit}
+                          className="p-1 rounded hover:bg-emerald-50 text-emerald-500 hover:text-emerald-600"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setEditId(null)}
+                          className="p-1 rounded hover:bg-red-50 text-neutral-400 hover:text-red-400"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </>
                 ) : (
                   <>
-                    <td className="py-2 px-4 font-medium text-slate-800">
-                      {u.username}
+                    <td className="py-2 px-4 text-neutral-800">{u.username}</td>
+                    <td className="py-2 px-3 text-neutral-400 text-xs font-mono">
+                      {u.rfidUuid ? u.rfidUuid.slice(0, 8) : "—"}
                     </td>
-                    <td className="py-2 px-2 text-slate-400 text-xs">
-                      {u.email || "—"}
-                    </td>
-                    <td className="py-2 px-2 text-slate-400 text-xs font-mono">
-                      {u.rfidUuid ? u.rfidUuid.slice(0, 8) + "…" : "—"}
-                    </td>
-                    <td className="text-center py-2 px-2">
+                    <td className="text-center py-2 px-3">
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${
                           u.role === "admin"
-                            ? "bg-indigo-50 text-indigo-600"
-                            : "bg-slate-100 text-slate-500"
+                            ? "bg-indigo-50 text-indigo-600 font-medium"
+                            : "bg-neutral-50 text-neutral-400"
                         }`}
                       >
                         {u.role}
                       </span>
                     </td>
-                    <td className="text-center py-2 px-2 text-slate-600">
+                    <td className="text-center py-2 px-3 text-neutral-500 tabular-nums">
                       {u.gamesPlayed}
                     </td>
-                    <td className="text-center py-2 px-2 text-emerald-600 font-medium">
+                    <td className="text-center py-2 px-3 text-neutral-800 font-medium tabular-nums">
                       {u.wins}
                     </td>
-                    <td className="text-center py-2 px-2 text-slate-600">
+                    <td
+                      className={`text-center py-2 px-3 tabular-nums ${
+                        u.winRate >= 60
+                          ? "text-emerald-600 font-medium"
+                          : u.winRate >= 40
+                            ? "text-amber-500"
+                            : "text-neutral-500"
+                      }`}
+                    >
                       {u.winRate}%
                     </td>
-                    <td className="text-center py-2 px-2 text-amber-600 font-medium">
-                      {u.totalPoints}
-                    </td>
-                    <td className="py-2 px-2 text-slate-400 text-xs">
+                    <td className="py-2 px-3 text-neutral-400 text-xs">
                       {fmtShortDate(u.createdAt)}
                     </td>
                     <td className="text-right py-2 px-4">
                       <div className="flex gap-1 justify-end">
                         <button
                           onClick={() => startEdit(u)}
-                          className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600"
+                          className="p-1 rounded hover:bg-neutral-100 text-neutral-300 hover:text-neutral-500"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => deleteUser(u.id)}
                           disabled={deleting === u.id}
-                          className="p-1.5 bg-slate-100 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 disabled:opacity-50"
+                          className="p-1 rounded hover:bg-red-50 text-neutral-300 hover:text-red-500 disabled:opacity-50"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -800,8 +793,8 @@ function UsersTab({
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <p className="text-slate-400 text-sm text-center py-6">
-            Aucun joueur trouvé
+          <p className="text-neutral-400 text-sm text-center py-8">
+            Aucun résultat
           </p>
         )}
       </div>
@@ -809,9 +802,7 @@ function UsersTab({
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// ─── SESSIONS TAB ─────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════
+// ─── SESSIONS ────────────────────────────────────────────────
 function SessionsTab({
   sessions,
   users,
@@ -858,7 +849,7 @@ function SessionsTab({
     });
     if (res.ok) {
       setEditId(null);
-      setMsg("Partie modifiée ✓");
+      setMsg("Modifié");
       setTimeout(() => setMsg(""), 2000);
       await onRefresh();
     }
@@ -871,7 +862,7 @@ function SessionsTab({
       method: "DELETE",
     });
     if (res.ok) {
-      setMsg("Partie supprimée ✓");
+      setMsg("Supprimé");
       setTimeout(() => setMsg(""), 2000);
       await onRefresh();
     }
@@ -880,56 +871,49 @@ function SessionsTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-base font-semibold flex items-center gap-2 text-slate-800">
-          <Swords className="w-5 h-5 text-purple-500" />
-          Gestion des parties
-          <span className="text-slate-400 text-sm font-normal">
-            ({sessions.length})
+      <div className="flex items-center justify-between">
+        <input
+          type="text"
+          placeholder="Rechercher…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="bg-white border border-neutral-200 rounded-md px-3 py-1.5 text-sm w-64 placeholder-neutral-300 focus:outline-none focus:border-neutral-400"
+        />
+        {msg && (
+          <span
+            className={`text-xs ${msg === "Supprimé" ? "text-red-500" : "text-emerald-500"}`}
+          >
+            {msg}
           </span>
-        </h2>
-        {msg && <span className="text-emerald-600 text-sm">{msg}</span>}
+        )}
       </div>
 
-      <input
-        type="text"
-        placeholder="Rechercher (joueur, id)..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full sm:w-80 bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 shadow-sm"
-      />
-
-      <div className="overflow-x-auto bg-white border border-slate-200 rounded-xl shadow-sm">
+      <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-slate-400 text-xs uppercase border-b border-slate-100">
-              <th className="text-left py-3 px-4">
-                <Hash className="w-3.5 h-3.5 inline" />
-              </th>
-              <th className="text-left py-3 px-2">Joueur 1</th>
-              <th className="text-center py-3 px-2">Score</th>
-              <th className="text-left py-3 px-2">Joueur 2</th>
-              <th className="text-left py-3 px-2">Gagnant</th>
-              <th className="text-right py-3 px-2">Durée</th>
-              <th className="text-right py-3 px-2">Date</th>
-              <th className="text-right py-3 px-4">Actions</th>
+            <tr className="text-xs text-neutral-400 border-b border-neutral-100">
+              <th className="text-left py-2.5 px-4 font-medium">#</th>
+              <th className="text-left py-2.5 px-3 font-medium">Joueur 1</th>
+              <th className="text-center py-2.5 px-3 font-medium">Score</th>
+              <th className="text-left py-2.5 px-3 font-medium">Joueur 2</th>
+              <th className="text-left py-2.5 px-3 font-medium">Gagnant</th>
+              <th className="text-right py-2.5 px-3 font-medium">Durée</th>
+              <th className="text-right py-2.5 px-3 font-medium">Date</th>
+              <th className="text-right py-2.5 px-4 font-medium"></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-neutral-50">
             {filtered.map((s) => (
-              <tr
-                key={s.id}
-                className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition"
-              >
+              <tr key={s.id} className="hover:bg-neutral-50/50">
                 {editId === s.id ? (
                   <>
-                    <td className="py-2 px-4 text-slate-400 text-xs">
-                      #{s.id}
+                    <td className="py-2 px-4 text-neutral-400 text-xs">
+                      {s.id}
                     </td>
-                    <td className="py-2 px-2 font-medium text-slate-800">
+                    <td className="py-2 px-3 text-neutral-800">
                       {s.player1Username}
                     </td>
-                    <td className="text-center py-2 px-2">
+                    <td className="text-center py-2 px-3">
                       <div className="flex items-center justify-center gap-1">
                         <input
                           type="number"
@@ -940,9 +924,9 @@ function SessionsTab({
                               player1Score: parseInt(e.target.value) || 0,
                             })
                           }
-                          className="bg-white border border-slate-300 rounded px-1 py-0.5 text-sm w-12 text-center focus:outline-none focus:border-indigo-400"
+                          className="border border-neutral-300 rounded px-1 py-0.5 text-sm w-12 text-center focus:outline-none focus:border-neutral-500"
                         />
-                        <span className="text-slate-400">–</span>
+                        <span className="text-neutral-300">–</span>
                         <input
                           type="number"
                           value={editData.player2Score}
@@ -952,27 +936,30 @@ function SessionsTab({
                               player2Score: parseInt(e.target.value) || 0,
                             })
                           }
-                          className="bg-white border border-slate-300 rounded px-1 py-0.5 text-sm w-12 text-center focus:outline-none focus:border-indigo-400"
+                          className="border border-neutral-300 rounded px-1 py-0.5 text-sm w-12 text-center focus:outline-none focus:border-neutral-500"
                         />
                       </div>
                     </td>
-                    <td className="py-2 px-2 font-medium text-slate-800">
+                    <td className="py-2 px-3 text-neutral-800">
                       {s.player2Username}
                     </td>
-                    <td className="py-2 px-2">
+                    <td className="py-2 px-3">
                       <select
                         value={editData.winnerId}
                         onChange={(e) =>
-                          setEditData({ ...editData, winnerId: e.target.value })
+                          setEditData({
+                            ...editData,
+                            winnerId: e.target.value,
+                          })
                         }
-                        className="bg-white border border-slate-300 rounded px-1 py-1 text-xs w-28 focus:outline-none focus:border-indigo-400"
+                        className="border border-neutral-300 rounded px-1 py-0.5 text-xs w-28 focus:outline-none focus:border-neutral-500"
                       >
-                        <option value="">Aucun</option>
+                        <option value="">—</option>
                         <option value={s.player1Id}>{s.player1Username}</option>
                         <option value={s.player2Id}>{s.player2Username}</option>
                       </select>
                     </td>
-                    <td className="text-right py-2 px-2">
+                    <td className="text-right py-2 px-3">
                       <input
                         type="number"
                         value={editData.durationSeconds}
@@ -982,23 +969,23 @@ function SessionsTab({
                             durationSeconds: parseInt(e.target.value) || 0,
                           })
                         }
-                        className="bg-white border border-slate-300 rounded px-1 py-0.5 text-sm w-16 text-right focus:outline-none focus:border-indigo-400"
+                        className="border border-neutral-300 rounded px-1 py-0.5 text-sm w-16 text-right focus:outline-none focus:border-neutral-500"
                       />
                     </td>
-                    <td className="text-right py-2 px-2 text-slate-400 text-xs">
+                    <td className="text-right py-2 px-3 text-neutral-400 text-xs">
                       {fmtDate(s.endedAt)}
                     </td>
                     <td className="text-right py-2 px-4">
                       <div className="flex gap-1 justify-end">
                         <button
                           onClick={saveEdit}
-                          className="p-1.5 bg-emerald-500 hover:bg-emerald-600 rounded text-white"
+                          className="p-1 rounded hover:bg-emerald-50 text-emerald-500 hover:text-emerald-600"
                         >
                           <Check className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setEditId(null)}
-                          className="p-1.5 bg-slate-200 hover:bg-slate-300 rounded text-slate-500"
+                          className="p-1 rounded hover:bg-red-50 text-neutral-400 hover:text-red-400"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -1007,39 +994,41 @@ function SessionsTab({
                   </>
                 ) : (
                   <>
-                    <td className="py-2 px-4 text-slate-400 text-xs">
-                      #{s.id}
+                    <td className="py-2 px-4 text-neutral-300 text-xs tabular-nums">
+                      {s.id}
                     </td>
-                    <td className="py-2 px-2 font-medium text-slate-800">
+                    <td className="py-2 px-3 text-neutral-800">
                       {s.player1Username}
                     </td>
-                    <td className="text-center py-2 px-2 font-bold text-indigo-600">
-                      {s.player1Score} – {s.player2Score}
+                    <td className="text-center py-2 px-3 font-mono text-xs font-medium text-neutral-800 tabular-nums">
+                      {s.player1Score}–{s.player2Score}
                     </td>
-                    <td className="py-2 px-2 font-medium text-slate-800">
+                    <td className="py-2 px-3 text-neutral-800">
                       {s.player2Username}
                     </td>
-                    <td className="py-2 px-2 text-emerald-600">
+                    <td
+                      className={`py-2 px-3 ${s.winnerUsername ? "text-emerald-600 font-medium" : "text-neutral-300"}`}
+                    >
                       {s.winnerUsername ?? "—"}
                     </td>
-                    <td className="text-right py-2 px-2 text-slate-400">
+                    <td className="text-right py-2 px-3 text-neutral-400 text-xs tabular-nums">
                       {fmt(s.durationSeconds)}
                     </td>
-                    <td className="text-right py-2 px-2 text-slate-400 text-xs">
+                    <td className="text-right py-2 px-3 text-neutral-400 text-xs">
                       {fmtDate(s.endedAt)}
                     </td>
                     <td className="text-right py-2 px-4">
                       <div className="flex gap-1 justify-end">
                         <button
                           onClick={() => startEdit(s)}
-                          className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600"
+                          className="p-1 rounded hover:bg-neutral-100 text-neutral-300 hover:text-neutral-500"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => deleteSession(s.id)}
                           disabled={deleting === s.id}
-                          className="p-1.5 bg-slate-100 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 disabled:opacity-50"
+                          className="p-1 rounded hover:bg-red-50 text-neutral-300 hover:text-red-500 disabled:opacity-50"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1052,8 +1041,8 @@ function SessionsTab({
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <p className="text-slate-400 text-sm text-center py-6">
-            Aucune partie trouvée
+          <p className="text-neutral-400 text-sm text-center py-8">
+            Aucun résultat
           </p>
         )}
       </div>

@@ -130,13 +130,13 @@ function HomeContent() {
               className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${
                 player1
                   ? "bg-linear-to-b from-[#c89b3c] to-[#785a28] border-[#c8aa6e] text-[#010a13]"
-                  : "bg-[#0a1628] border-[#785a28]/40 text-[#5b5a56]"
+                  : "bg-[#0a1628] border-[#785a28] text-[#a09b8c]"
               }`}
             >
               {player1 ? (
                 <Shield className="w-4 h-4" />
               ) : (
-                <Users className="w-4 h-4" />
+                <Users className="w-4 h-4" />            
               )}
             </div>
             <div>
@@ -172,7 +172,7 @@ function HomeContent() {
               className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${
                 player2
                   ? "bg-linear-to-b from-[#c89b3c] to-[#785a28] border-[#c8aa6e] text-[#010a13]"
-                  : "bg-[#0a1628] border-[#785a28]/40 text-[#5b5a56]"
+                  : "bg-[#0a1628] border-[#785a28]/60 text-[#a09b8c]"
               }`}
             >
               {player2 ? (

@@ -10,15 +10,15 @@ export function useRfidPolling(
   const router = useRouter();
 
   useEffect(() => {
-    const poll = async () => {
-      try {
-        const url = borne
-          ? `/api/rfid?machineId=${encodeURIComponent(borne)}`
-          : "/api/rfid";
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) return;
+    const url = borne
+      ? `/api/rfid/stream?machineId=${encodeURIComponent(borne)}`
+      : "/api/rfid/stream";
 
-        const data = await res.json();
+    const eventSource = new EventSource(url);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
 
         if (data.scan) {
           if (onScan) {
@@ -37,12 +37,15 @@ export function useRfidPolling(
           }
         }
       } catch (err) {
-        console.error("Polling error", err);
+        console.error("SSE parse error", err);
       }
     };
 
-    const interval = setInterval(poll, 500);
+    eventSource.onerror = () => {
+      // EventSource reconnects automatically after a short delay
+      console.warn("SSE connection lost, reconnecting...");
+    };
 
-    return () => clearInterval(interval);
+    return () => eventSource.close();
   }, [router, onScan, borne]);
 }
