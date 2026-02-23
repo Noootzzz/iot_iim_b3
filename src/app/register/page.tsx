@@ -55,6 +55,7 @@ function RegisterContent() {
       if (!response.ok) throw new Error(data.error || "Erreur création");
 
       const returnToLobby = searchParams.get("returnToLobby");
+      const borne = searchParams.get("borne");
 
       if (returnToLobby) {
         // Mode Lobby multi-joueur : on retourne à l'accueil avec les états préservés
@@ -65,6 +66,7 @@ function RegisterContent() {
         const params = new URLSearchParams();
         if (p1) params.set("p1", p1);
         if (s1) params.set("scan1", s1);
+        if (borne) params.set("borne", borne);
 
         // On insère le nouveau joueur dans le slot approprié
         if (slot === "1") {
@@ -77,8 +79,12 @@ function RegisterContent() {
 
         router.push(`/?${params.toString()}`);
       } else {
-        // Mode legacy (juste au cas où)
-        router.push(`/game?userId=${data.user.id}&scanId=${scanId}`);
+        const gameParams = new URLSearchParams({
+          userId: data.user.id,
+          scanId: String(scanId),
+        });
+        if (borne) gameParams.set("borne", borne);
+        router.push(`/game?${gameParams.toString()}`);
       }
     } catch (err: any) {
       setError(err.message);

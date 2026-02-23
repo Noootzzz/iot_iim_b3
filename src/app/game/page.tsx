@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { LogOut, Timer, Plus, Minus, Crown, Swords, Shield, Flame } from "lucide-react";
+import {
+  LogOut,
+  Timer,
+  Plus,
+  Minus,
+  Crown,
+  Swords,
+  Shield,
+  Flame,
+} from "lucide-react";
 
 interface User {
   id: string;
@@ -20,13 +29,14 @@ function GameContent() {
   const player2Id = searchParams.get("player2Id");
   const scan2Id = searchParams.get("scan2Id");
   const isLocal = searchParams.get("mode") === "local";
+  const borne = searchParams.get("borne");
 
   const [user, setUser] = useState<User | null>(null);
   const [player2, setPlayer2] = useState<User | null>(null);
 
-  const [gameState, setGameState] = useState<"LOADING" | "PLAYING" | "FINISHED">(
-    "LOADING"
-  );
+  const [gameState, setGameState] = useState<
+    "LOADING" | "PLAYING" | "FINISHED"
+  >("LOADING");
   const [score1, setScore1] = useState(0);
   const [score2, setScore2] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -37,14 +47,17 @@ function GameContent() {
   useEffect(() => {
     if (isLocal) {
       setUser({ id: "c752edcc-b731-458d-8c22-db44d7111e9f", username: "Noot" });
-      setPlayer2({ id: "e2a0407d-6b7e-4adc-9a28-f7ccbebaa009", username: "SxLaDrill" });
+      setPlayer2({
+        id: "e2a0407d-6b7e-4adc-9a28-f7ccbebaa009",
+        username: "SxLaDrill",
+      });
       startTimeRef.current = new Date();
       setGameState("PLAYING");
       return;
     }
 
     if (!userId || !scanId || !player2Id || !scan2Id) {
-      router.push("/");
+      router.push(borne ? `/?borne=${borne}` : "/");
       return;
     }
 
@@ -62,7 +75,7 @@ function GameContent() {
         setGameState("PLAYING");
       } catch (e) {
         console.error("Erreur auth:", e);
-        router.push("/");
+        router.push(borne ? `/?borne=${borne}` : "/");
       }
     };
 
@@ -92,7 +105,7 @@ function GameContent() {
   const endGame = async (
     gameWinner: User | null,
     finalScore1: number,
-    finalScore2: number
+    finalScore2: number,
   ) => {
     if (timerRef.current) clearInterval(timerRef.current);
     setWinner(gameWinner);
@@ -131,7 +144,7 @@ function GameContent() {
           body: JSON.stringify({ scanId: scan2Id }),
         });
     }
-    router.push("/");
+    router.push(borne ? `/?borne=${borne}` : "/");
   };
 
   const formatTime = (seconds: number) => {
@@ -145,7 +158,11 @@ function GameContent() {
     return (
       <div className="min-h-screen rift-bg flex items-center justify-center">
         <div className="text-center space-y-4">
-          <img src="/Riftbound_icon.png" alt="Riftbound" className="w-20 h-20 object-contain mx-auto animate-pulse" />
+          <img
+            src="/Riftbound_icon.png"
+            alt="Riftbound"
+            className="w-20 h-20 object-contain mx-auto animate-pulse"
+          />
           <p className="text-[#a09b8c] font-display tracking-widest uppercase text-sm">
             Invocation en cours...
           </p>
@@ -184,9 +201,7 @@ function GameContent() {
               </p>
               <p
                 className={`text-5xl font-display font-black ${
-                  winner?.id === user?.id
-                    ? "text-[#c8aa6e]"
-                    : "text-[#5b5a56]"
+                  winner?.id === user?.id ? "text-[#c8aa6e]" : "text-[#5b5a56]"
                 }`}
               >
                 {score1}
@@ -243,7 +258,11 @@ function GameContent() {
         <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#c8aa6e]/30 to-transparent" />
 
         <div className="flex items-center gap-3">
-          <img src="/Riftbound_icon.png" alt="Riftbound" className="w-8 h-8 object-contain" />
+          <img
+            src="/Riftbound_icon.png"
+            alt="Riftbound"
+            className="w-8 h-8 object-contain"
+          />
           <h1 className="font-display text-lg font-bold text-[#c8aa6e] tracking-widest uppercase">
             Riftbound
           </h1>
@@ -269,7 +288,8 @@ function GameContent() {
       {/* Score target indicator */}
       <div className="bg-[#0a0e1a]/60 border-b border-[#463714]/50 py-1.5 text-center">
         <p className="text-[10px] text-[#5b5a56] uppercase tracking-[0.3em] font-display">
-          Premier à <span className="text-[#c8aa6e]">{WINNING_SCORE}</span> points
+          Premier à <span className="text-[#c8aa6e]">{WINNING_SCORE}</span>{" "}
+          points
         </p>
       </div>
 

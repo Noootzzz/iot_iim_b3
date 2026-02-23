@@ -9,7 +9,7 @@ const IOT_SECRET = process.env.IOT_SECRET || "CHANGE_ME_IN_PROD";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { rfidUuid } = body;
+    const { rfidUuid, machineId } = body;
 
     if (!rfidUuid) {
       return NextResponse.json({ error: "Missing UUID" }, { status: 400 });
@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
 
     await db.insert(scans).values({
       rfidUuid,
+      machineId: machineId || null,
       consumed: false,
     });
 
@@ -36,15 +37,22 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/rfid - Polling Frontend
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const machineId = request.nextUrl.searchParams.get("machineId");
     const fiveSecondsAgo = new Date(Date.now() - 5000);
 
+    const conditions = [
+      eq(scans.consumed, false),
+      gt(scans.scannedAt, fiveSecondsAgo),
+    ];
+
+    if (machineId) {
+      conditions.push(eq(scans.machineId, machineId));
+    }
+
     const latestScan = await db.query.scans.findFirst({
-      where: and(
-        eq(scans.consumed, false),
-        gt(scans.scannedAt, fiveSecondsAgo)
-      ),
+      where: and(...conditions),
       orderBy: [desc(scans.scannedAt)],
     });
 
@@ -63,8 +71,9 @@ export async function GET() {
 
     return NextResponse.json({
       scan: {
-        id: latestScan.id, // Ajout de l'ID du scan pour la vérification
+        id: latestScan.id,
         rfidUuid: latestScan.rfidUuid,
+        machineId: latestScan.machineId || null,
         known: !!user,
         user: user || null,
       },

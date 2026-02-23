@@ -1,9 +1,9 @@
 "use client";
 
 import { useRfidPolling } from "@/hooks/useRfidPolling";
-import { Scan, Users, CheckCircle, Wifi, Swords, Shield } from "lucide-react";
+import { Users, Wifi, Swords, Shield } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 
 interface ConnectedPlayer {
   id: string;
@@ -18,6 +18,7 @@ function HomeContent() {
   const s1Id = searchParams.get("scan1");
   const p2Id = searchParams.get("p2");
   const s2Id = searchParams.get("scan2");
+  const borne = searchParams.get("borne");
 
   const [player1, setPlayer1] = useState<ConnectedPlayer | null>(null);
   const [player2, setPlayer2] = useState<ConnectedPlayer | null>(null);
@@ -38,13 +39,18 @@ function HomeContent() {
   useEffect(() => {
     if (p1Id && p2Id && s1Id && s2Id) {
       const timer = setTimeout(() => {
-        router.push(
-          `/game?userId=${p1Id}&scanId=${s1Id}&player2Id=${p2Id}&scan2Id=${s2Id}`
-        );
+        const params = new URLSearchParams({
+          userId: p1Id,
+          scanId: s1Id,
+          player2Id: p2Id,
+          scan2Id: s2Id,
+        });
+        if (borne) params.set("borne", borne);
+        router.push(`/game?${params.toString()}`);
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [p1Id, p2Id, s1Id, s2Id, router]);
+  }, [p1Id, p2Id, s1Id, s2Id, router, borne]);
 
   const handleScan = (scan: any) => {
     if (!scan.known || !scan.user) {
@@ -56,31 +62,31 @@ function HomeContent() {
       const targetSlot = !p1Id ? "1" : "2";
       currentState.set("slot", targetSlot);
       currentState.set("returnToLobby", "true");
+      if (borne) currentState.set("borne", borne);
 
       router.push(
-        `/register?rfid=${scan.rfidUuid}&scanId=${
-          scan.id
-        }&${currentState.toString()}`
+        `/register?rfid=${scan.rfidUuid}&scanId=${scan.id}&${currentState.toString()}`,
       );
       return;
     }
 
     const scannedUser = scan.user;
+    const borneStr = borne ? `&borne=${borne}` : "";
 
     if (!player1) {
-      router.push(`/?p1=${scannedUser.id}&scan1=${scan.id}`);
+      router.push(`/?p1=${scannedUser.id}&scan1=${scan.id}${borneStr}`);
     } else if (!player2) {
       if (String(scannedUser.id) === String(p1Id)) {
         console.warn("Joueur déjà connecté");
         return;
       }
       router.push(
-        `/?p1=${p1Id}&scan1=${s1Id}&p2=${scannedUser.id}&scan2=${scan.id}`
+        `/?p1=${p1Id}&scan1=${s1Id}&p2=${scannedUser.id}&scan2=${scan.id}${borneStr}`,
       );
     }
   };
 
-  useRfidPolling(handleScan);
+  useRfidPolling(handleScan, borne);
 
   return (
     <div className="min-h-screen rift-bg flex items-center justify-center p-4">
@@ -90,7 +96,11 @@ function HomeContent() {
 
         {/* Logo */}
         <div className="mb-2 flex flex-col items-center">
-          <img src="/Riftbound_icon.png" alt="Riftbound" className="w-28 h-28 object-contain mb-2" />
+          <img
+            src="/Riftbound_icon.png"
+            alt="Riftbound"
+            className="w-28 h-28 object-contain mb-2"
+          />
           <h1 className="font-display text-3xl font-bold gold-gradient tracking-widest">
             RIFTBOUND
           </h1>
@@ -132,9 +142,11 @@ function HomeContent() {
                 <h3 className="font-display font-bold text-[#f0e6d2] text-lg">
                   {player1 ? player1.username : "Invocateur 1"}
                 </h3>
-                <p className={`text-xs uppercase tracking-[0.2em] font-semibold mt-1 ${
-                  player1 ? "text-[#c8aa6e]" : "text-[#5b5a56]"
-                }`}>
+                <p
+                  className={`text-xs uppercase tracking-[0.2em] font-semibold mt-1 ${
+                    player1 ? "text-[#c8aa6e]" : "text-[#5b5a56]"
+                  }`}
+                >
                   {player1 ? "✦ Prêt" : "En attente..."}
                 </p>
               </div>
@@ -167,9 +179,11 @@ function HomeContent() {
                 <h3 className="font-display font-bold text-[#f0e6d2] text-lg">
                   {player2 ? player2.username : "Invocateur 2"}
                 </h3>
-                <p className={`text-xs uppercase tracking-[0.2em] font-semibold mt-1 ${
-                  player2 ? "text-[#c8aa6e]" : "text-[#5b5a56]"
-                }`}>
+                <p
+                  className={`text-xs uppercase tracking-[0.2em] font-semibold mt-1 ${
+                    player2 ? "text-[#c8aa6e]" : "text-[#5b5a56]"
+                  }`}
+                >
                   {player2 ? "✦ Prêt" : "En attente..."}
                 </p>
               </div>
@@ -191,7 +205,9 @@ function HomeContent() {
         {/* Séparateur */}
         <div className="flex items-center gap-4 mt-8">
           <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent to-[#463714]" />
-          <span className="text-xs text-[#5b5a56] uppercase tracking-[0.2em] font-display">ou</span>
+          <span className="text-xs text-[#5b5a56] uppercase tracking-[0.2em] font-display">
+            ou
+          </span>
           <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-[#463714]" />
         </div>
 

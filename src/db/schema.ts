@@ -27,6 +27,7 @@ export const users = pgTable("users", {
 export const scans = pgTable("scans", {
   id: serial("id").primaryKey(),
   rfidUuid: text("rfid_uuid").notNull(),
+  machineId: text("machine_id"),
   scannedAt: timestamp("scanned_at").defaultNow(),
   consumed: boolean("consumed").default(false).notNull(),
   revoked: boolean("revoked").default(false).notNull(),

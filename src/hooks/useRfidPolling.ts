@@ -3,13 +3,19 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export function useRfidPolling(onScan?: (scan: any) => void) {
+export function useRfidPolling(
+  onScan?: (scan: any) => void,
+  borne?: string | null,
+) {
   const router = useRouter();
 
   useEffect(() => {
     const poll = async () => {
       try {
-        const res = await fetch("/api/rfid", { cache: "no-store" });
+        const url = borne
+          ? `/api/rfid?machineId=${encodeURIComponent(borne)}`
+          : "/api/rfid";
+        const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) return;
 
         const data = await res.json();
@@ -22,11 +28,11 @@ export function useRfidPolling(onScan?: (scan: any) => void) {
 
           if (data.scan.known && data.scan.user) {
             router.push(
-              `/game?userId=${data.scan.user.id}&scanId=${data.scan.id}`
+              `/game?userId=${data.scan.user.id}&scanId=${data.scan.id}`,
             );
           } else {
             router.push(
-              `/register?rfid=${data.scan.rfidUuid}&scanId=${data.scan.id}`
+              `/register?rfid=${data.scan.rfidUuid}&scanId=${data.scan.id}`,
             );
           }
         }
@@ -38,5 +44,5 @@ export function useRfidPolling(onScan?: (scan: any) => void) {
     const interval = setInterval(poll, 1500);
 
     return () => clearInterval(interval);
-  }, [router, onScan]);
+  }, [router, onScan, borne]);
 }
