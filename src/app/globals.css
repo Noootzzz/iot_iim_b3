@@ -1,111 +1,192 @@
 @import "tailwindcss";
 
 :root {
-  /* Riftbound Dark Fantasy Palette */
-  --bg-primary: #0a0e1a;
-  --bg-secondary: #111827;
-  --bg-card: #151c2f;
-  --bg-card-hover: #1a2340;
+  /* League of Legends inspired palette */
+  --bg-deep: #010a13;
+  --bg-primary: #0a1628;
+  --bg-secondary: #0a2540;
+  --bg-card: #091428;
+  --bg-card-hover: #0d1f3c;
 
-  --gold-50: #fefce8;
-  --gold-100: #fef9c3;
-  --gold-200: #fef08a;
-  --gold-300: #fde047;
-  --gold-400: #c8aa6e;
-  --gold-500: #c89b3c;
-  --gold-600: #a67c2e;
-  --gold-700: #785a28;
+  --gold: #c8aa6e;
+  --gold-light: #f0e6d2;
+  --gold-dark: #785a28;
+  --gold-bright: #c89b3c;
 
+  --blue-light: #cdfafa;
   --blue-accent: #0ac8b9;
   --blue-dark: #005a82;
+  --blue-deep: #0397ab;
+
   --red-accent: #e84057;
+  --green-accent: #1cad6e;
 
   --text-primary: #f0e6d2;
   --text-secondary: #a09b8c;
   --text-muted: #5b5a56;
 
-  --border-gold: #463714;
-  --border-light: #785a28;
+  --border-gold: #785a28;
+  --border-dark: #1e2328;
+  --border-blue: #005a82;
 }
 
-@theme inline {
-  --font-display: var(--font-cinzel);
-  --font-body: var(--font-inter);
+/* Display font */
+.font-display {
+  font-family: var(--font-sora), system-ui, sans-serif;
 }
 
+html,
 body {
-  background: var(--bg-primary);
+  width: 800px;
+  height: 480px;
+  max-width: 800px;
+  max-height: 480px;
+  overflow: hidden;
+  background: var(--bg-deep);
   color: var(--text-primary);
-  font-family: var(--font-body), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Riftbound Utility Classes */
-.font-display {
-  font-family: var(--font-display), serif;
-}
-
+/* Gold text gradient like LoL titles */
 .gold-gradient {
-  background: linear-gradient(180deg, #f0e6d2 0%, #c8aa6e 50%, #785a28 100%);
+  background: linear-gradient(180deg, #f0e6d2 0%, #c8aa6e 40%, #785a28 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.border-gold-gradient {
-  border-image: linear-gradient(to bottom, #c8aa6e, #785a28) 1;
+/* Blue glow text */
+.blue-glow {
+  color: var(--blue-accent);
+  text-shadow:
+    0 0 10px rgba(10, 200, 185, 0.4),
+    0 0 30px rgba(10, 200, 185, 0.15);
 }
 
-.card-rift {
-  background: linear-gradient(135deg, #151c2f 0%, #1a2340 100%);
-  border: 1px solid #463714;
-  box-shadow:
-    0 0 15px rgba(200, 170, 110, 0.05),
-    inset 0 1px 0 rgba(200, 170, 110, 0.1);
+/* LoL-style card with hextech feel */
+.card-hextech {
+  background: linear-gradient(
+    180deg,
+    rgba(9, 20, 40, 0.95) 0%,
+    rgba(1, 10, 19, 0.98) 100%
+  );
+  border: 1px solid var(--border-gold);
+  position: relative;
 }
 
-.card-rift:hover {
-  border-color: #785a28;
-  box-shadow:
-    0 0 25px rgba(200, 170, 110, 0.1),
-    inset 0 1px 0 rgba(200, 170, 110, 0.15);
+.card-hextech::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.6;
 }
 
-.btn-rift {
+/* LoL-style primary button - gold */
+.btn-lol {
   background: linear-gradient(180deg, #c89b3c 0%, #785a28 100%);
-  color: #0a0e1a;
-  font-family: var(--font-display), serif;
+  color: #010a13;
+  font-family: var(--font-sora), system-ui, sans-serif;
   font-weight: 700;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border: 1px solid #c8aa6e;
-  transition: all 0.2s ease;
+  letter-spacing: 0.12em;
+  border: 1px solid var(--gold);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
 }
 
-.btn-rift:hover {
+.btn-lol:hover {
   background: linear-gradient(180deg, #f0e6d2 0%, #c89b3c 100%);
-  box-shadow: 0 0 20px rgba(200, 170, 110, 0.3);
+  box-shadow: 0 0 15px rgba(200, 170, 110, 0.3);
 }
 
-.btn-rift:active {
+.btn-lol:active {
   transform: scale(0.97);
 }
 
-/* Subtle animated glow */
+/* Ghost/secondary button */
+.btn-lol-ghost {
+  background: transparent;
+  border: 1px solid var(--border-gold);
+  color: var(--gold);
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-lol-ghost:hover {
+  border-color: var(--gold);
+  background: rgba(200, 155, 60, 0.08);
+  color: var(--gold-light);
+}
+
+/* Corner decorations — hextech style */
+.corner-decor {
+  position: relative;
+}
+.corner-decor::before,
+.corner-decor::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--gold);
+  border-style: solid;
+}
+.corner-decor::before {
+  top: -1px;
+  left: -1px;
+  border-width: 2px 0 0 2px;
+}
+.corner-decor::after {
+  top: -1px;
+  right: -1px;
+  border-width: 2px 2px 0 0;
+}
+
+/* Subtle gold glow animation */
 @keyframes pulse-gold {
-  0%, 100% { box-shadow: 0 0 10px rgba(200, 170, 110, 0.1); }
-  50% { box-shadow: 0 0 25px rgba(200, 170, 110, 0.25); }
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(200, 170, 110, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(200, 170, 110, 0.25);
+  }
 }
 
-.glow-gold {
-  animation: pulse-gold 3s ease-in-out infinite;
+/* Scan ring animation */
+@keyframes scan-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
 }
 
-/* Background pattern overlay */
+.animate-scan-ring {
+  animation: scan-ring 2s ease-out infinite;
+}
+
+/* Background with subtle radial glow */
 .rift-bg {
-  background:
-    radial-gradient(ellipse at 20% 50%, rgba(10, 200, 185, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 50%, rgba(200, 155, 60, 0.05) 0%, transparent 50%),
-    linear-gradient(180deg, #0a0e1a 0%, #111827 100%);
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(10, 37, 64, 0.5) 0%,
+    var(--bg-deep) 70%
+  );
 }

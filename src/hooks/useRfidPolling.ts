@@ -41,7 +41,7 @@ export function useRfidPolling(
       }
     };
 
-    const interval = setInterval(poll, 1500);
+    const interval = setInterval(poll, 500);
 
     return () => clearInterval(interval);
   }, [router, onScan, borne]);

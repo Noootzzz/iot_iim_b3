@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CreditCard, Loader2, Ban, ArrowLeft } from "lucide-react";
+import { CreditCard, Loader2, Ban, Shield } from "lucide-react";
 import Link from "next/link";
 
 function RegisterContent() {
@@ -18,20 +18,21 @@ function RegisterContent() {
   // 🔒 PROTECTION : Si pas de RFID dans l'URL, on bloque l'affichage
   if (!rfidParam) {
     return (
-      <div className="w-full max-w-md bg-white border border-gray-200 shadow-xl rounded-2xl p-8 text-center">
-        <div className="mx-auto w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mb-4">
-          <Ban className="w-6 h-6 text-red-500" />
+      <div className="card-hextech corner-decor w-full max-w-sm p-6 text-center">
+        <div className="mx-auto w-10 h-10 rounded-full bg-[#e84057]/10 border border-[#e84057]/30 flex items-center justify-center mb-3">
+          <Ban className="w-5 h-5 text-[#e84057]" />
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Accès refusé</h2>
-        <p className="text-gray-500 mb-6">
-          Vous ne pouvez pas créer de compte manuellement. Veuillez scanner un
-          badge sur le lecteur pour commencer.
+        <h2 className="text-base font-display font-bold text-[#f0e6d2] mb-1">
+          Accès refusé
+        </h2>
+        <p className="text-[#a09b8c] text-xs mb-4">
+          Veuillez scanner un badge sur le lecteur pour commencer.
         </p>
         <Link
           href="/"
-          className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors w-full"
+          className="btn-lol-ghost px-4 py-2 rounded-md inline-flex items-center justify-center gap-1.5 text-xs w-full"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" /> Retour à l'accueil
+          <Shield className="w-3.5 h-3.5" /> Retour à l&apos;accueil
         </Link>
       </div>
     );
@@ -58,17 +59,15 @@ function RegisterContent() {
       const borne = searchParams.get("borne");
 
       if (returnToLobby) {
-        // Mode Lobby multi-joueur : on retourne à l'accueil avec les états préservés
         const p1 = searchParams.get("p1");
         const s1 = searchParams.get("scan1");
-        const slot = searchParams.get("slot"); // "1" ou "2"
+        const slot = searchParams.get("slot");
 
         const params = new URLSearchParams();
         if (p1) params.set("p1", p1);
         if (s1) params.set("scan1", s1);
         if (borne) params.set("borne", borne);
 
-        // On insère le nouveau joueur dans le slot approprié
         if (slot === "1") {
           params.set("p1", String(data.user.id));
           params.set("scan1", String(scanId));
@@ -94,40 +93,41 @@ function RegisterContent() {
   };
 
   return (
-    <div className="w-full max-w-md bg-white border border-gray-200 shadow-xl rounded-2xl p-8">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
-          Nouveau Badge Détecté
+    <div className="card-hextech corner-decor w-full max-w-sm p-6">
+      {/* Header */}
+      <div className="mb-4">
+        <h2 className="font-display text-lg font-bold text-[#c8aa6e] tracking-wider">
+          Nouveau Badge
         </h2>
-        <p className="text-gray-500 text-sm mt-1">
-          Finalisez l'activation de votre carte.
+        <p className="text-[#a09b8c] text-xs mt-0.5">
+          Finalisez l&apos;activation de votre carte.
         </p>
       </div>
 
-      {/* Carte visuelle du badge détecté */}
-      <div className="mb-8 p-4 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center gap-4">
-        <div className="bg-white p-2 rounded-lg shadow-sm">
-          <CreditCard className="text-indigo-600 w-6 h-6" />
+      {/* Badge card */}
+      <div className="mb-4 p-2.5 bg-[#0a1628] border border-[#785a28]/30 rounded-lg flex items-center gap-3">
+        <div className="bg-[#091428] p-1.5 rounded-md border border-[#785a28]/20">
+          <CreditCard className="text-[#c8aa6e] w-4 h-4" />
         </div>
         <div>
-          <p className="text-indigo-900 font-bold text-sm">
-            Badge physique #ID
+          <p className="text-[#f0e6d2] font-display font-bold text-xs tracking-wider">
+            Badge physique
           </p>
-          <p className="text-indigo-600/80 text-xs font-mono tracking-wider">
+          <p className="text-[#785a28] text-[10px] font-mono tracking-wider">
             {rfidParam}
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Choisissez un Pseudo
+          <label className="block text-xs font-display text-[#a09b8c] mb-1 tracking-wider uppercase">
+            Pseudo d&apos;invocateur
           </label>
           <input
             type="text"
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder-gray-400"
+            className="w-full px-3 py-2 text-sm bg-[#0a1628] border border-[#785a28]/30 rounded-md text-[#f0e6d2] focus:border-[#c8aa6e] focus:ring-1 focus:ring-[#c8aa6e]/30 outline-none transition-all placeholder-[#5b5a56]"
             placeholder="Ex: PlayerOne"
             value={formData.username}
             onChange={(e) =>
@@ -137,13 +137,13 @@ function RegisterContent() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email de récupération
+          <label className="block text-xs font-display text-[#a09b8c] mb-1 tracking-wider uppercase">
+            Email
           </label>
           <input
             type="email"
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder-gray-400"
+            className="w-full px-3 py-2 text-sm bg-[#0a1628] border border-[#785a28]/30 rounded-md text-[#f0e6d2] focus:border-[#c8aa6e] focus:ring-1 focus:ring-[#c8aa6e]/30 outline-none transition-all placeholder-[#5b5a56]"
             placeholder="email@exemple.com"
             value={formData.email}
             onChange={(e) =>
@@ -153,7 +153,7 @@ function RegisterContent() {
         </div>
 
         {error && (
-          <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+          <div className="p-2 bg-[#e84057]/10 text-[#e84057] text-xs rounded-md border border-[#e84057]/20">
             {error}
           </div>
         )}
@@ -161,12 +161,12 @@ function RegisterContent() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors flex justify-center items-center gap-2 shadow-sm disabled:opacity-70 mt-2"
+          className="btn-lol w-full py-2.5 rounded-md text-sm font-display font-semibold tracking-wider flex justify-center items-center gap-2 disabled:opacity-70 mt-1"
         >
           {loading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            "Associer le badge et Jouer"
+            "Activer & Jouer"
           )}
         </button>
       </form>
@@ -176,8 +176,14 @@ function RegisterContent() {
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Suspense fallback={<div className="text-gray-500">Chargement...</div>}>
+    <div className="w-[800px] h-[480px] rift-bg flex items-center justify-center p-3">
+      <Suspense
+        fallback={
+          <p className="text-[#a09b8c] font-display tracking-widest text-sm">
+            Chargement...
+          </p>
+        }
+      >
         <RegisterContent />
       </Suspense>
     </div>

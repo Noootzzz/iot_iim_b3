@@ -10,7 +10,6 @@ import {
   Crown,
   Swords,
   Shield,
-  Flame,
 } from "lucide-react";
 
 interface User {
@@ -28,8 +27,8 @@ function GameContent() {
   const scanId = searchParams.get("scanId");
   const player2Id = searchParams.get("player2Id");
   const scan2Id = searchParams.get("scan2Id");
-  const isLocal = searchParams.get("mode") === "local";
   const borne = searchParams.get("borne");
+  const isDemo = searchParams.get("mode") === "demo";
 
   const [user, setUser] = useState<User | null>(null);
   const [player2, setPlayer2] = useState<User | null>(null);
@@ -45,12 +44,10 @@ function GameContent() {
   const startTimeRef = useRef<Date | null>(null);
 
   useEffect(() => {
-    if (isLocal) {
-      setUser({ id: "c752edcc-b731-458d-8c22-db44d7111e9f", username: "Noot" });
-      setPlayer2({
-        id: "e2a0407d-6b7e-4adc-9a28-f7ccbebaa009",
-        username: "SxLaDrill",
-      });
+    // --- DEMO MODE (temporaire) ---
+    if (isDemo) {
+      setUser({ id: "demo-1", username: "Player 1" });
+      setPlayer2({ id: "demo-2", username: "Player 2" });
       startTimeRef.current = new Date();
       setGameState("PLAYING");
       return;
@@ -80,7 +77,7 @@ function GameContent() {
     };
 
     verifyAndStart();
-  }, [userId, scanId, player2Id, scan2Id, isLocal, router]);
+  }, [userId, scanId, player2Id, scan2Id, isDemo, router]);
 
   useEffect(() => {
     if (gameState === "PLAYING") {
@@ -111,6 +108,8 @@ function GameContent() {
     setWinner(gameWinner);
     setGameState("FINISHED");
 
+    if (isDemo) return;
+
     try {
       await fetch("/api/game-sessions", {
         method: "POST",
@@ -130,7 +129,7 @@ function GameContent() {
   };
 
   const handleLogout = async () => {
-    if (!isLocal) {
+    if (!isDemo) {
       if (scanId)
         await fetch("/api/auth/logout", {
           method: "POST",
@@ -156,14 +155,14 @@ function GameContent() {
   // --- LOADING ---
   if (gameState === "LOADING") {
     return (
-      <div className="min-h-screen rift-bg flex items-center justify-center">
-        <div className="text-center space-y-4">
+      <div className="w-[800px] h-[480px] rift-bg flex items-center justify-center">
+        <div className="text-center space-y-3">
           <img
             src="/Riftbound_icon.png"
             alt="Riftbound"
-            className="w-20 h-20 object-contain mx-auto animate-pulse"
+            className="w-12 h-12 object-contain mx-auto animate-pulse drop-shadow-[0_0_12px_rgba(200,170,110,0.3)]"
           />
-          <p className="text-[#a09b8c] font-display tracking-widest uppercase text-sm">
+          <p className="text-[#a09b8c] font-display tracking-[0.2em] uppercase text-xs">
             Invocation en cours...
           </p>
         </div>
@@ -171,51 +170,52 @@ function GameContent() {
     );
   }
 
-  // --- FINISHED (Recap) ---
+  // --- FINISHED ---
   if (gameState === "FINISHED") {
     return (
-      <div className="min-h-screen rift-bg flex items-center justify-center p-4">
-        <div className="max-w-lg w-full card-rift rounded-2xl p-10 text-center space-y-8 relative overflow-hidden">
-          {/* Top gold line */}
-          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#c8aa6e] to-transparent" />
+      <div className="w-[800px] h-[480px] rift-bg flex items-center justify-center relative">
+        {/* Top line */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-[#c8aa6e]/40 to-transparent" />
 
+        <div className="w-[480px] text-center space-y-5">
           {/* Crown */}
-          <div className="inline-flex p-5 rounded-full bg-gradient-to-b from-[#c89b3c]/20 to-transparent border border-[#c8aa6e]/30">
-            <Crown className="w-10 h-10 text-[#c8aa6e]" />
+          <div className="inline-flex p-4 rounded-full bg-linear-to-b from-[#c89b3c]/15 to-transparent border border-[#785a28]/40">
+            <Crown className="w-8 h-8 text-[#c8aa6e] drop-shadow-[0_0_10px_rgba(200,170,110,0.3)]" />
           </div>
 
+          {/* Winner */}
           <div>
-            <p className="text-xs font-display text-[#785a28] uppercase tracking-[0.3em] mb-2">
+            <p className="text-[10px] font-display text-[#785a28] uppercase tracking-[0.3em] mb-1">
               Victoire
             </p>
-            <h2 className="font-display text-3xl font-bold gold-gradient">
+            <h2 className="font-display text-2xl font-bold gold-gradient tracking-wider">
               {winner?.username || "Égalité"}
             </h2>
           </div>
 
           {/* Scores */}
-          <div className="grid grid-cols-3 items-center gap-4">
+          <div className="flex items-center justify-center gap-6">
             <div className="text-center">
-              <p className="text-xs text-[#a09b8c] mb-2 font-display uppercase tracking-wider">
+              <p className="text-[10px] text-[#a09b8c] mb-1 font-display uppercase tracking-wider">
                 {user?.username}
               </p>
               <p
-                className={`text-5xl font-display font-black ${
+                className={`text-4xl font-display font-black tabular-nums ${
                   winner?.id === user?.id ? "text-[#c8aa6e]" : "text-[#5b5a56]"
                 }`}
               >
                 {score1}
               </p>
             </div>
+
+            <Swords className="w-5 h-5 text-[#785a28]/60" />
+
             <div className="text-center">
-              <Swords className="w-6 h-6 text-[#463714] mx-auto" />
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-[#a09b8c] mb-2 font-display uppercase tracking-wider">
+              <p className="text-[10px] text-[#a09b8c] mb-1 font-display uppercase tracking-wider">
                 {player2?.username}
               </p>
               <p
-                className={`text-5xl font-display font-black ${
+                className={`text-4xl font-display font-black tabular-nums ${
                   winner?.id === player2?.id
                     ? "text-[#0ac8b9]"
                     : "text-[#5b5a56]"
@@ -227,9 +227,9 @@ function GameContent() {
           </div>
 
           {/* Duration */}
-          <div className="flex items-center justify-center gap-2 text-[#5b5a56]">
-            <Timer className="w-4 h-4" />
-            <span className="text-sm font-display tracking-wider">
+          <div className="flex items-center justify-center gap-1.5 text-[#5b5a56]">
+            <Timer className="w-3 h-3" />
+            <span className="text-xs font-display tracking-wider">
               {formatTime(elapsed)}
             </span>
           </div>
@@ -237,142 +237,139 @@ function GameContent() {
           {/* Return button */}
           <button
             onClick={handleLogout}
-            className="w-full btn-rift px-6 py-3.5 rounded-lg text-sm flex items-center justify-center gap-2"
+            className="btn-lol px-8 py-2.5 rounded-md flex items-center justify-center gap-2 mx-auto"
           >
-            <Shield className="w-4 h-4" />
+            <Shield className="w-3.5 h-3.5" />
             Retour au lobby
           </button>
-
-          {/* Bottom border */}
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#463714] to-transparent" />
         </div>
+
+        {/* Bottom line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-[#785a28]/30 to-transparent" />
       </div>
     );
   }
 
   // --- PLAYING ---
   return (
-    <div className="min-h-screen rift-bg text-[#f0e6d2] flex flex-col">
+    <div className="w-[800px] h-[480px] rift-bg text-[#f0e6d2] flex flex-col overflow-hidden relative">
       {/* Header */}
-      <header className="bg-[#111827]/80 backdrop-blur-sm border-b border-[#463714] px-6 py-3 flex justify-between items-center relative">
-        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#c8aa6e]/30 to-transparent" />
-
-        <div className="flex items-center gap-3">
+      <header className="bg-[#010a13]/80 backdrop-blur-sm border-b border-[#785a28]/30 px-4 py-2 flex justify-between items-center shrink-0">
+        <div className="flex items-center gap-2">
           <img
             src="/Riftbound_icon.png"
             alt="Riftbound"
-            className="w-8 h-8 object-contain"
+            className="w-5 h-5 object-contain"
           />
-          <h1 className="font-display text-lg font-bold text-[#c8aa6e] tracking-widest uppercase">
+          <h1 className="font-display text-xs font-bold text-[#c8aa6e] tracking-[0.15em] uppercase">
             Riftbound
           </h1>
         </div>
 
-        {/* Timer central */}
-        <div className="flex items-center gap-2 bg-[#0a0e1a] border border-[#463714] px-5 py-1.5 rounded-full">
-          <Timer className="w-4 h-4 text-[#785a28]" />
-          <span className="text-lg font-mono font-bold text-[#c8aa6e] tracking-wider">
+        {/* Timer */}
+        <div className="flex items-center gap-1.5 bg-[#010a13] border border-[#785a28]/40 px-4 py-1 rounded-full">
+          <Timer className="w-3 h-3 text-[#785a28]" />
+          <span className="text-sm font-mono font-bold text-[#c8aa6e] tracking-wider">
             {formatTime(elapsed)}
           </span>
         </div>
 
         <button
           onClick={handleLogout}
-          className="p-2 hover:bg-[#1a2340] rounded-lg border border-transparent hover:border-[#463714] text-[#5b5a56] hover:text-[#a09b8c] transition-all"
+          className="p-1.5 hover:bg-[#0a1628] rounded-md border border-transparent hover:border-[#785a28]/30 text-[#5b5a56] hover:text-[#a09b8c] transition-all"
           title="Quitter"
         >
-          <LogOut className="w-5 h-5" />
+          <LogOut className="w-4 h-4" />
         </button>
       </header>
 
-      {/* Score target indicator */}
-      <div className="bg-[#0a0e1a]/60 border-b border-[#463714]/50 py-1.5 text-center">
-        <p className="text-[10px] text-[#5b5a56] uppercase tracking-[0.3em] font-display">
+      {/* Score target */}
+      <div className="bg-[#010a13]/50 border-b border-[#785a28]/15 py-1 text-center shrink-0">
+        <p className="text-[9px] text-[#5b5a56] uppercase tracking-[0.3em] font-display">
           Premier à <span className="text-[#c8aa6e]">{WINNING_SCORE}</span>{" "}
           points
         </p>
       </div>
 
-      {/* Split-screen game area */}
-      <main className="flex-1 grid grid-cols-2 gap-0 relative">
-        {/* Center VS divider */}
+      {/* Game area — split screen */}
+      <main className="flex-1 grid grid-cols-2 gap-0 relative min-h-0">
+        {/* VS divider */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-          <div className="w-14 h-14 rounded-full bg-[#0a0e1a] border-2 border-[#463714] flex items-center justify-center">
-            <Swords className="w-6 h-6 text-[#785a28]" />
+          <div className="w-10 h-10 rounded-full bg-[#010a13] border border-[#785a28]/50 flex items-center justify-center shadow-[0_0_20px_rgba(1,10,19,0.8)]">
+            <Swords className="w-4 h-4 text-[#785a28]" />
           </div>
         </div>
 
-        {/* Player 1 - Left (Gold) */}
-        <div className="flex flex-col items-center justify-center p-8 bg-gradient-to-br from-[#c8aa6e]/5 to-transparent border-r border-[#463714]/50 relative">
-          <p className="text-xs font-display text-[#785a28] uppercase tracking-[0.3em] mb-2">
+        {/* Vertical divider */}
+        <div className="absolute top-0 bottom-0 left-1/2 w-px -translate-x-1/2 bg-linear-to-b from-[#785a28]/30 via-[#785a28]/10 to-[#785a28]/30 z-0" />
+
+        {/* Player 1 — Gold */}
+        <div className="flex flex-col items-center justify-center p-4 relative">
+          <p className="text-[10px] font-display text-[#785a28] uppercase tracking-[0.25em] mb-1">
             Invocateur I
           </p>
-          <h2 className="font-display text-2xl font-bold text-[#c8aa6e] mb-8 tracking-wide">
+          <h2 className="font-display text-base font-bold text-[#c8aa6e] mb-5 tracking-wider">
             {user?.username}
           </h2>
 
-          {/* Score */}
-          <div className="text-8xl font-display font-black text-[#c8aa6e] tabular-nums mb-10 drop-shadow-[0_0_30px_rgba(200,170,110,0.2)]">
+          <div className="text-6xl font-display font-black text-[#c8aa6e] tabular-nums mb-6 drop-shadow-[0_0_25px_rgba(200,170,110,0.15)]">
             {score1}
           </div>
 
-          {/* Buttons */}
-          <div className="flex gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setScore1((s) => Math.max(0, s - 1))}
-              className="w-14 h-14 rounded-full bg-[#151c2f] border-2 border-[#463714] hover:border-[#e84057]/50 hover:bg-[#e84057]/10 active:bg-[#e84057]/20 transition-all flex items-center justify-center active:scale-90"
+              className="w-11 h-11 rounded-full bg-[#091428] border border-[#785a28]/30 hover:border-[#e84057]/50 hover:bg-[#e84057]/5 active:bg-[#e84057]/10 transition-all flex items-center justify-center active:scale-90"
             >
-              <Minus className="w-5 h-5 text-[#e84057]" />
+              <Minus className="w-4 h-4 text-[#e84057]" />
             </button>
             <button
               onClick={() => setScore1((s) => s + 1)}
-              className="w-20 h-20 rounded-full bg-gradient-to-b from-[#c89b3c] to-[#785a28] border-2 border-[#c8aa6e] hover:from-[#f0e6d2] hover:to-[#c89b3c] active:scale-90 transition-all flex items-center justify-center shadow-[0_0_25px_rgba(200,170,110,0.2)]"
+              className="w-16 h-16 rounded-full bg-linear-to-b from-[#c89b3c] to-[#785a28] border border-[#c8aa6e] hover:from-[#f0e6d2] hover:to-[#c89b3c] active:scale-90 transition-all flex items-center justify-center shadow-[0_0_20px_rgba(200,170,110,0.15)]"
             >
-              <Plus className="w-7 h-7 text-[#0a0e1a]" />
+              <Plus className="w-6 h-6 text-[#010a13]" />
             </button>
           </div>
         </div>
 
-        {/* Player 2 - Right (Teal/Cyan) */}
-        <div className="flex flex-col items-center justify-center p-8 bg-gradient-to-bl from-[#0ac8b9]/5 to-transparent relative">
-          <p className="text-xs font-display text-[#0ac8b9]/50 uppercase tracking-[0.3em] mb-2">
+        {/* Player 2 — Teal */}
+        <div className="flex flex-col items-center justify-center p-4 relative">
+          <p className="text-[10px] font-display text-[#0ac8b9]/40 uppercase tracking-[0.25em] mb-1">
             Invocateur II
           </p>
-          <h2 className="font-display text-2xl font-bold text-[#0ac8b9] mb-8 tracking-wide">
+          <h2 className="font-display text-base font-bold text-[#0ac8b9] mb-5 tracking-wider">
             {player2?.username}
           </h2>
 
-          {/* Score */}
-          <div className="text-8xl font-display font-black text-[#0ac8b9] tabular-nums mb-10 drop-shadow-[0_0_30px_rgba(10,200,185,0.2)]">
+          <div className="text-6xl font-display font-black text-[#0ac8b9] tabular-nums mb-6 drop-shadow-[0_0_25px_rgba(10,200,185,0.15)]">
             {score2}
           </div>
 
-          {/* Buttons */}
-          <div className="flex gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setScore2((s) => Math.max(0, s - 1))}
-              className="w-14 h-14 rounded-full bg-[#151c2f] border-2 border-[#463714] hover:border-[#e84057]/50 hover:bg-[#e84057]/10 active:bg-[#e84057]/20 transition-all flex items-center justify-center active:scale-90"
+              className="w-11 h-11 rounded-full bg-[#091428] border border-[#785a28]/30 hover:border-[#e84057]/50 hover:bg-[#e84057]/5 active:bg-[#e84057]/10 transition-all flex items-center justify-center active:scale-90"
             >
-              <Minus className="w-5 h-5 text-[#e84057]" />
+              <Minus className="w-4 h-4 text-[#e84057]" />
             </button>
             <button
               onClick={() => setScore2((s) => s + 1)}
-              className="w-20 h-20 rounded-full bg-gradient-to-b from-[#0ac8b9] to-[#005a82] border-2 border-[#0ac8b9] hover:from-[#5ef5e6] hover:to-[#0ac8b9] active:scale-90 transition-all flex items-center justify-center shadow-[0_0_25px_rgba(10,200,185,0.2)]"
+              className="w-16 h-16 rounded-full bg-linear-to-b from-[#0ac8b9] to-[#005a82] border border-[#0ac8b9] hover:from-[#5ef5e6] hover:to-[#0ac8b9] active:scale-90 transition-all flex items-center justify-center shadow-[0_0_20px_rgba(10,200,185,0.15)]"
             >
-              <Plus className="w-7 h-7 text-[#0a0e1a]" />
+              <Plus className="w-6 h-6 text-[#010a13]" />
             </button>
           </div>
         </div>
       </main>
 
       {/* Progress bar */}
-      <div className="h-1.5 bg-[#0a0e1a] flex border-t border-[#463714]/30">
+      <div className="h-1 bg-[#010a13] flex shrink-0">
         <div
-          className="bg-gradient-to-r from-[#785a28] to-[#c8aa6e] transition-all duration-300"
+          className="bg-linear-to-r from-[#785a28] to-[#c8aa6e] transition-all duration-300"
           style={{ width: `${(score1 / WINNING_SCORE) * 50}%` }}
         />
         <div
-          className="bg-gradient-to-l from-[#005a82] to-[#0ac8b9] transition-all duration-300 ml-auto"
+          className="bg-linear-to-l from-[#005a82] to-[#0ac8b9] transition-all duration-300 ml-auto"
           style={{ width: `${(score2 / WINNING_SCORE) * 50}%` }}
         />
       </div>
@@ -384,8 +381,8 @@ export default function GamePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen rift-bg flex items-center justify-center">
-          <p className="text-[#a09b8c] font-display tracking-widest">
+        <div className="w-[800px] h-[480px] rift-bg flex items-center justify-center">
+          <p className="text-[#a09b8c] font-display tracking-widest text-sm">
             Chargement...
           </p>
         </div>

@@ -1,9 +1,9 @@
 "use client";
 
 import { useRfidPolling } from "@/hooks/useRfidPolling";
-import { Users, Wifi, Swords, Shield } from "lucide-react";
+import { Users, Wifi, Shield, Swords } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 
 interface ConnectedPlayer {
   id: string;
@@ -47,7 +47,7 @@ function HomeContent() {
         });
         if (borne) params.set("borne", borne);
         router.push(`/game?${params.toString()}`);
-      }, 1000);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [p1Id, p2Id, s1Id, s2Id, router, borne]);
@@ -89,140 +89,137 @@ function HomeContent() {
   useRfidPolling(handleScan, borne);
 
   return (
-    <div className="min-h-screen rift-bg flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full card-rift rounded-2xl p-10 text-center relative overflow-hidden">
-        {/* Decorative top border glow */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#c8aa6e] to-transparent" />
+    <div className="w-[800px] h-[480px] rift-bg flex flex-col items-center justify-center relative">
+      {/* Top gold line */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-[#c8aa6e]/40 to-transparent" />
 
-        {/* Logo */}
-        <div className="mb-2 flex flex-col items-center">
-          <img
-            src="/Riftbound_icon.png"
-            alt="Riftbound"
-            className="w-28 h-28 object-contain mb-2"
-          />
-          <h1 className="font-display text-3xl font-bold gold-gradient tracking-widest">
-            RIFTBOUND
-          </h1>
-          <p className="text-[#a09b8c] text-xs uppercase tracking-[0.3em] mt-1">
-            Arena
-          </p>
-        </div>
-
-        <div className="w-16 h-[1px] bg-gradient-to-r from-transparent via-[#785a28] to-transparent mx-auto my-6" />
-
-        <p className="text-[#a09b8c] text-base mb-10">
-          En attente de 2 invocateurs pour le combat...
+      {/* Logo + Title */}
+      <div className="flex flex-col items-center mb-5">
+        <img
+          src="/Riftbound_icon.png"
+          alt="Riftbound"
+          className="w-14 h-14 object-contain mb-2 drop-shadow-[0_0_12px_rgba(200,170,110,0.3)]"
+        />
+        <h1 className="font-display text-2xl font-bold gold-gradient tracking-[0.15em] uppercase">
+          Riftbound
+        </h1>
+        <p className="text-[#a09b8c] text-[10px] uppercase tracking-[0.35em] mt-1 font-display">
+          Arena
         </p>
-
-        <div className="grid grid-cols-2 gap-6 mb-10">
-          {/* Slot Joueur 1 */}
-          <div
-            className={`p-6 rounded-xl border transition-all duration-300 ${
-              player1
-                ? "border-[#c8aa6e] bg-[#c8aa6e]/5 glow-gold"
-                : "border-[#463714] bg-[#0a0e1a]/50"
-            }`}
-          >
-            <div className="flex flex-col items-center gap-3">
-              <div
-                className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${
-                  player1
-                    ? "bg-gradient-to-b from-[#c89b3c] to-[#785a28] border-[#c8aa6e] text-[#0a0e1a]"
-                    : "bg-[#151c2f] border-[#463714] text-[#5b5a56]"
-                }`}
-              >
-                {player1 ? (
-                  <Shield className="w-7 h-7" />
-                ) : (
-                  <Users className="w-7 h-7" />
-                )}
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-[#f0e6d2] text-lg">
-                  {player1 ? player1.username : "Invocateur 1"}
-                </h3>
-                <p
-                  className={`text-xs uppercase tracking-[0.2em] font-semibold mt-1 ${
-                    player1 ? "text-[#c8aa6e]" : "text-[#5b5a56]"
-                  }`}
-                >
-                  {player1 ? "✦ Prêt" : "En attente..."}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Slot Joueur 2 */}
-          <div
-            className={`p-6 rounded-xl border transition-all duration-300 ${
-              player2
-                ? "border-[#c8aa6e] bg-[#c8aa6e]/5 glow-gold"
-                : "border-[#463714] bg-[#0a0e1a]/50"
-            }`}
-          >
-            <div className="flex flex-col items-center gap-3">
-              <div
-                className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${
-                  player2
-                    ? "bg-gradient-to-b from-[#c89b3c] to-[#785a28] border-[#c8aa6e] text-[#0a0e1a]"
-                    : "bg-[#151c2f] border-[#463714] text-[#5b5a56]"
-                }`}
-              >
-                {player2 ? (
-                  <Shield className="w-7 h-7" />
-                ) : (
-                  <Users className="w-7 h-7" />
-                )}
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-[#f0e6d2] text-lg">
-                  {player2 ? player2.username : "Invocateur 2"}
-                </h3>
-                <p
-                  className={`text-xs uppercase tracking-[0.2em] font-semibold mt-1 ${
-                    player2 ? "text-[#c8aa6e]" : "text-[#5b5a56]"
-                  }`}
-                >
-                  {player2 ? "✦ Prêt" : "En attente..."}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Scan indicator */}
-        <div className="flex flex-col items-center justify-center space-y-3">
-          <div className="relative flex items-center justify-center">
-            <span className="absolute inline-flex h-8 w-8 animate-ping rounded-full bg-[#c8aa6e] opacity-20"></span>
-            <Wifi className="relative text-[#c8aa6e] w-7 h-7" />
-          </div>
-          <p className="text-xs text-[#785a28] font-medium uppercase tracking-[0.2em]">
-            Scannez vos badges pour rejoindre l&apos;arène
-          </p>
-        </div>
-
-        {/* Séparateur */}
-        <div className="flex items-center gap-4 mt-8">
-          <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent to-[#463714]" />
-          <span className="text-xs text-[#5b5a56] uppercase tracking-[0.2em] font-display">
-            ou
-          </span>
-          <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-[#463714]" />
-        </div>
-
-        {/* Bouton local */}
-        <button
-          onClick={() => router.push("/game?mode=local")}
-          className="mt-6 w-full btn-rift px-6 py-3.5 rounded-lg flex items-center justify-center gap-3 text-sm"
-        >
-          <Swords className="w-5 h-5" />
-          Duel Local
-        </button>
-
-        {/* Bottom decorative border */}
-        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#463714] to-transparent" />
       </div>
+
+      {/* Divider */}
+      <div className="w-40 h-px bg-linear-to-r from-transparent via-[#785a28] to-transparent mb-4" />
+
+      <p className="text-[#a09b8c] text-xs mb-5">
+        En attente de 2 invocateurs pour le combat...
+      </p>
+
+      {/* Player cards */}
+      <div className="flex items-center gap-4 mb-6">
+        {/* Player 1 */}
+        <div
+          className={`w-[230px] card-hextech corner-decor rounded-lg px-5 py-4 transition-all duration-300 ${
+            player1
+              ? "border-[#c8aa6e] shadow-[0_0_15px_rgba(200,170,110,0.1)]"
+              : ""
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${
+                player1
+                  ? "bg-linear-to-b from-[#c89b3c] to-[#785a28] border-[#c8aa6e] text-[#010a13]"
+                  : "bg-[#0a1628] border-[#785a28]/40 text-[#5b5a56]"
+              }`}
+            >
+              {player1 ? (
+                <Shield className="w-4 h-4" />
+              ) : (
+                <Users className="w-4 h-4" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-display font-semibold text-[#f0e6d2]">
+                {player1 ? player1.username : "Invocateur I"}
+              </p>
+              <p
+                className={`text-[10px] uppercase tracking-[0.15em] font-semibold mt-0.5 ${
+                  player1 ? "text-[#c8aa6e]" : "text-[#5b5a56]"
+                }`}
+              >
+                {player1 ? "✦ Prêt" : "En attente..."}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* VS badge */}
+        <div className="w-10 h-10 rounded-full bg-[#0a1628] border border-[#785a28]/50 flex items-center justify-center">
+          <Swords className="w-4 h-4 text-[#785a28]" />
+        </div>
+
+        {/* Player 2 */}
+        <div
+          className={`w-[230px] card-hextech corner-decor rounded-lg px-5 py-4 transition-all duration-300 ${
+            player2
+              ? "border-[#c8aa6e] shadow-[0_0_15px_rgba(200,170,110,0.1)]"
+              : ""
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${
+                player2
+                  ? "bg-linear-to-b from-[#c89b3c] to-[#785a28] border-[#c8aa6e] text-[#010a13]"
+                  : "bg-[#0a1628] border-[#785a28]/40 text-[#5b5a56]"
+              }`}
+            >
+              {player2 ? (
+                <Shield className="w-4 h-4" />
+              ) : (
+                <Users className="w-4 h-4" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-display font-semibold text-[#f0e6d2]">
+                {player2 ? player2.username : "Invocateur II"}
+              </p>
+              <p
+                className={`text-[10px] uppercase tracking-[0.15em] font-semibold mt-0.5 ${
+                  player2 ? "text-[#c8aa6e]" : "text-[#5b5a56]"
+                }`}
+              >
+                {player2 ? "✦ Prêt" : "En attente..."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scan indicator */}
+      <div className="flex items-center gap-2.5">
+        <div className="relative flex items-center justify-center">
+          <span className="absolute inline-flex h-6 w-6 rounded-full border border-[#c8aa6e]/30 animate-scan-ring"></span>
+          <Wifi className="relative w-4 h-4 text-[#c8aa6e]" />
+        </div>
+        <p className="text-[10px] text-[#785a28] font-medium uppercase tracking-[0.2em] font-display">
+          Scannez vos badges
+        </p>
+      </div>
+
+      {/* DEBUG: Lien temporaire */}
+      <div className="mt-5">
+        <button
+          onClick={() => router.push("/game?mode=demo")}
+          className="btn-lol-ghost px-4 py-1.5 rounded text-[9px]"
+        >
+          Test Game →
+        </button>
+      </div>
+
+      {/* Bottom gold line */}
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-[#785a28]/30 to-transparent" />
     </div>
   );
 }
@@ -231,8 +228,8 @@ export default function Home() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen rift-bg flex items-center justify-center">
-          <p className="text-[#a09b8c] font-display tracking-widest">
+        <div className="w-[800px] h-[480px] rift-bg flex items-center justify-center">
+          <p className="text-[#a09b8c] font-display tracking-widest text-sm">
             Chargement...
           </p>
         </div>
