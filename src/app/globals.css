@@ -1,31 +1,111 @@
 @import "tailwindcss";
 
 :root {
-  /* BACKGROUND: gray-50 (#f9fafb) 
-     C'est la couleur de fond standard pour les apps modernes (Linear, Vercel).
-     Cela permet aux cartes blanches (bg-white) de ressortir. */
-  --background: #f9fafb;
+  /* Riftbound Dark Fantasy Palette */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #151c2f;
+  --bg-card-hover: #1a2340;
 
-  /* FOREGROUND: gray-900 (#111827)
-     Un gris très foncé, plus doux que le noir pur (#000000) pour la lecture. */
-  --foreground: #111827;
+  --gold-50: #fefce8;
+  --gold-100: #fef9c3;
+  --gold-200: #fef08a;
+  --gold-300: #fde047;
+  --gold-400: #c8aa6e;
+  --gold-500: #c89b3c;
+  --gold-600: #a67c2e;
+  --gold-700: #785a28;
+
+  --blue-accent: #0ac8b9;
+  --blue-dark: #005a82;
+  --red-accent: #e84057;
+
+  --text-primary: #f0e6d2;
+  --text-secondary: #a09b8c;
+  --text-muted: #5b5a56;
+
+  --border-gold: #463714;
+  --border-light: #785a28;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-cinzel);
+  --font-body: var(--font-inter);
 }
 
-/* J'ai retiré le block @media dark pour forcer le design épuré */
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-
-  /* Optionnel : Lissage des polices pour un rendu plus net sur MacOS/iOS */
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Riftbound Utility Classes */
+.font-display {
+  font-family: var(--font-display), serif;
+}
+
+.gold-gradient {
+  background: linear-gradient(180deg, #f0e6d2 0%, #c8aa6e 50%, #785a28 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.border-gold-gradient {
+  border-image: linear-gradient(to bottom, #c8aa6e, #785a28) 1;
+}
+
+.card-rift {
+  background: linear-gradient(135deg, #151c2f 0%, #1a2340 100%);
+  border: 1px solid #463714;
+  box-shadow:
+    0 0 15px rgba(200, 170, 110, 0.05),
+    inset 0 1px 0 rgba(200, 170, 110, 0.1);
+}
+
+.card-rift:hover {
+  border-color: #785a28;
+  box-shadow:
+    0 0 25px rgba(200, 170, 110, 0.1),
+    inset 0 1px 0 rgba(200, 170, 110, 0.15);
+}
+
+.btn-rift {
+  background: linear-gradient(180deg, #c89b3c 0%, #785a28 100%);
+  color: #0a0e1a;
+  font-family: var(--font-display), serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 1px solid #c8aa6e;
+  transition: all 0.2s ease;
+}
+
+.btn-rift:hover {
+  background: linear-gradient(180deg, #f0e6d2 0%, #c89b3c 100%);
+  box-shadow: 0 0 20px rgba(200, 170, 110, 0.3);
+}
+
+.btn-rift:active {
+  transform: scale(0.97);
+}
+
+/* Subtle animated glow */
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 10px rgba(200, 170, 110, 0.1); }
+  50% { box-shadow: 0 0 25px rgba(200, 170, 110, 0.25); }
+}
+
+.glow-gold {
+  animation: pulse-gold 3s ease-in-out infinite;
+}
+
+/* Background pattern overlay */
+.rift-bg {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(10, 200, 185, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(200, 155, 60, 0.05) 0%, transparent 50%),
+    linear-gradient(180deg, #0a0e1a 0%, #111827 100%);
 }

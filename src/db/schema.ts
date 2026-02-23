@@ -4,7 +4,6 @@ import {
   text,
   integer,
   timestamp,
-  primaryKey,
   boolean,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -13,8 +12,8 @@ import { relations } from "drizzle-orm";
 // --- TABLE UTILISATEURS ---
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
-  username: text("username").notNull().unique(), // Pseudo unique requis
-  email: text("email").unique(), // Email optionnel
+  username: text("username").notNull().unique(),
+  email: text("email").unique(),
   rfidUuid: text("rfid_uuid").unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -28,92 +27,42 @@ export const scans = pgTable("scans", {
   revoked: boolean("revoked").default(false).notNull(),
 });
 
-// --- TABLE JEUX (ex: Riotgames Reborn) ---
-export const games = pgTable("games", {
+// --- TABLE SESSIONS DE JEU (1v1) ---
+export const gameSessions = pgTable("game_sessions", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// --- TABLE SCORES (Lien User <-> Jeu) ---
-export const scores = pgTable("scores", {
-  id: serial("id").primaryKey(),
-  userId: uuid("user_id")
+  player1Id: uuid("player1_id")
     .references(() => users.id, { onDelete: "cascade" })
     .notNull(),
-  gameId: integer("game_id")
-    .references(() => games.id, { onDelete: "cascade" })
+  player2Id: uuid("player2_id")
+    .references(() => users.id, { onDelete: "cascade" })
     .notNull(),
-  scoreValue: integer("score_value").notNull(), // Le score numérique
-  playedAt: timestamp("played_at").defaultNow(),
+  player1Score: integer("player1_score").notNull().default(0),
+  player2Score: integer("player2_score").notNull().default(0),
+  winnerId: uuid("winner_id").references(() => users.id),
+  durationSeconds: integer("duration_seconds").notNull().default(0),
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
 });
 
-// --- TABLE BADGES ---
-export const badges = pgTable("badges", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  imageUrl: text("image_url"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// --- TABLE DE LIAISON (User <-> Badges) ---
-// Un user peut avoir plusieurs badges, un badge peut être possédé par plusieurs users
-export const userBadges = pgTable(
-  "user_badges",
-  {
-    userId: integer("user_id")
-      .references(() => users.id, { onDelete: "cascade" })
-      .notNull(),
-    badgeId: integer("badge_id")
-      .references(() => badges.id, { onDelete: "cascade" })
-      .notNull(),
-    earnedAt: timestamp("earned_at").defaultNow(),
-  },
-  (t) => ({
-    // Clé primaire composite : on ne peut pas donner le même badge 2x au même user
-    pk: primaryKey({ columns: [t.userId, t.badgeId] }),
-  })
-);
-
-// --- RELATIONS (Pour les requêtes intelligentes "query") ---
-// Relations pour Users : un user a plusieurs scores et plusieurs badges
+// --- RELATIONS ---
 export const usersRelations = relations(users, ({ many }) => ({
-  scores: many(scores),
-  userBadges: many(userBadges),
+  sessionsAsPlayer1: many(gameSessions, { relationName: "player1" }),
+  sessionsAsPlayer2: many(gameSessions, { relationName: "player2" }),
 }));
 
-// Relations pour Scores : un score appartient à 1 user et 1 jeu
-export const scoresRelations = relations(scores, ({ one }) => ({
-  user: one(users, {
-    fields: [scores.userId],
+export const gameSessionsRelations = relations(gameSessions, ({ one }) => ({
+  player1: one(users, {
+    fields: [gameSessions.player1Id],
+    references: [users.id],
+    relationName: "player1",
+  }),
+  player2: one(users, {
+    fields: [gameSessions.player2Id],
+    references: [users.id],
+    relationName: "player2",
+  }),
+  winner: one(users, {
+    fields: [gameSessions.winnerId],
     references: [users.id],
   }),
-  game: one(games, {
-    fields: [scores.gameId],
-    references: [games.id],
-  }),
-}));
-
-// Relations pour UserBadges : lien vers User et vers Badge
-export const userBadgesRelations = relations(userBadges, ({ one }) => ({
-  user: one(users, {
-    fields: [userBadges.userId],
-    references: [users.id],
-  }),
-  badge: one(badges, {
-    fields: [userBadges.badgeId],
-    references: [badges.id],
-  }),
-}));
-
-// Relations pour Badges : un badge est possédé par plusieurs users (via userBadges)
-export const badgesRelations = relations(badges, ({ many }) => ({
-  userBadges: many(userBadges),
-}));
-
-// Relations pour Games : un jeu a plusieurs scores
-export const gamesRelations = relations(games, ({ many }) => ({
-  scores: many(scores),
 }));

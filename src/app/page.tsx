@@ -1,7 +1,7 @@
 "use client";
 
 import { useRfidPolling } from "@/hooks/useRfidPolling";
-import { Scan, Users, CheckCircle, Wifi } from "lucide-react";
+import { Scan, Users, CheckCircle, Wifi, Swords, Shield } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 
@@ -14,7 +14,6 @@ function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // On récupère l'état actuel depuis l'URL (persistence simple)
   const p1Id = searchParams.get("p1");
   const s1Id = searchParams.get("scan1");
   const p2Id = searchParams.get("p2");
@@ -23,7 +22,6 @@ function HomeContent() {
   const [player1, setPlayer1] = useState<ConnectedPlayer | null>(null);
   const [player2, setPlayer2] = useState<ConnectedPlayer | null>(null);
 
-  // Charger les infos des joueurs si présents dans l'URL
   useEffect(() => {
     if (p1Id) {
       fetch(`/api/users?id=${p1Id}`)
@@ -37,7 +35,6 @@ function HomeContent() {
     }
   }, [p1Id, p2Id]);
 
-  // Si on a les 2 joueurs, on démarre le jeu après un court délai
   useEffect(() => {
     if (p1Id && p2Id && s1Id && s2Id) {
       const timer = setTimeout(() => {
@@ -49,16 +46,13 @@ function HomeContent() {
     }
   }, [p1Id, p2Id, s1Id, s2Id, router]);
 
-  // Gérer les scans entrants
   const handleScan = (scan: any) => {
-    // Si c'est un scan inconnu, on redirige vers l'inscription en préservant l'état
     if (!scan.known || !scan.user) {
       const currentState = new URLSearchParams();
       if (p1Id) {
         currentState.set("p1", p1Id);
-        currentState.set("scan1", s1Id!); // On suppose que scan1 existe si p1 existe
+        currentState.set("scan1", s1Id!);
       }
-      // On indique qu'on s'attend à remplir le slot 1 ou 2
       const targetSlot = !p1Id ? "1" : "2";
       currentState.set("slot", targetSlot);
       currentState.set("returnToLobby", "true");
@@ -73,17 +67,13 @@ function HomeContent() {
 
     const scannedUser = scan.user;
 
-    // Logique d'ajout au lobby
     if (!player1) {
-      // Ajout Slot 1
       router.push(`/?p1=${scannedUser.id}&scan1=${scan.id}`);
     } else if (!player2) {
-      // Empêcher le même joueur de se scanner deux fois
       if (String(scannedUser.id) === String(p1Id)) {
         console.warn("Joueur déjà connecté");
         return;
       }
-      // Ajout Slot 2
       router.push(
         `/?p1=${p1Id}&scan1=${s1Id}&p2=${scannedUser.id}&scan2=${scan.id}`
       );
@@ -93,44 +83,59 @@ function HomeContent() {
   useRfidPolling(handleScan);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl border border-gray-100 p-10 text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">
-          Lobby
-        </h1>
-        <p className="text-gray-500 text-lg mb-10">
-          En attente de 2 joueurs pour commencer la partie...
+    <div className="min-h-screen rift-bg flex items-center justify-center p-4">
+      <div className="max-w-2xl w-full card-rift rounded-2xl p-10 text-center relative overflow-hidden">
+        {/* Decorative top border glow */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#c8aa6e] to-transparent" />
+
+        {/* Logo */}
+        <div className="mb-2 flex flex-col items-center">
+          <img src="/Riftbound_icon.png" alt="Riftbound" className="w-28 h-28 object-contain mb-2" />
+          <h1 className="font-display text-3xl font-bold gold-gradient tracking-widest">
+            RIFTBOUND
+          </h1>
+          <p className="text-[#a09b8c] text-xs uppercase tracking-[0.3em] mt-1">
+            Arena
+          </p>
+        </div>
+
+        <div className="w-16 h-[1px] bg-gradient-to-r from-transparent via-[#785a28] to-transparent mx-auto my-6" />
+
+        <p className="text-[#a09b8c] text-base mb-10">
+          En attente de 2 invocateurs pour le combat...
         </p>
 
-        <div className="grid grid-cols-2 gap-8 mb-10">
+        <div className="grid grid-cols-2 gap-6 mb-10">
           {/* Slot Joueur 1 */}
           <div
-            className={`p-6 rounded-xl border-2 transition-all ${
+            className={`p-6 rounded-xl border transition-all duration-300 ${
               player1
-                ? "border-indigo-500 bg-indigo-50"
-                : "border-dashed border-gray-300"
+                ? "border-[#c8aa6e] bg-[#c8aa6e]/5 glow-gold"
+                : "border-[#463714] bg-[#0a0e1a]/50"
             }`}
           >
             <div className="flex flex-col items-center gap-3">
               <div
-                className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${
                   player1
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-100 text-gray-400"
+                    ? "bg-gradient-to-b from-[#c89b3c] to-[#785a28] border-[#c8aa6e] text-[#0a0e1a]"
+                    : "bg-[#151c2f] border-[#463714] text-[#5b5a56]"
                 }`}
               >
                 {player1 ? (
-                  <CheckCircle className="w-8 h-8" />
+                  <Shield className="w-7 h-7" />
                 ) : (
-                  <Users className="w-8 h-8" />
+                  <Users className="w-7 h-7" />
                 )}
               </div>
               <div>
-                <h3 className="font-bold text-gray-900">
-                  {player1 ? player1.username : "Joueur 1"}
+                <h3 className="font-display font-bold text-[#f0e6d2] text-lg">
+                  {player1 ? player1.username : "Invocateur 1"}
                 </h3>
-                <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">
-                  {player1 ? "Prêt" : "En attente du badge..."}
+                <p className={`text-xs uppercase tracking-[0.2em] font-semibold mt-1 ${
+                  player1 ? "text-[#c8aa6e]" : "text-[#5b5a56]"
+                }`}>
+                  {player1 ? "✦ Prêt" : "En attente..."}
                 </p>
               </div>
             </div>
@@ -138,47 +143,69 @@ function HomeContent() {
 
           {/* Slot Joueur 2 */}
           <div
-            className={`p-6 rounded-xl border-2 transition-all ${
+            className={`p-6 rounded-xl border transition-all duration-300 ${
               player2
-                ? "border-indigo-500 bg-indigo-50"
-                : "border-dashed border-gray-300"
+                ? "border-[#c8aa6e] bg-[#c8aa6e]/5 glow-gold"
+                : "border-[#463714] bg-[#0a0e1a]/50"
             }`}
           >
             <div className="flex flex-col items-center gap-3">
               <div
-                className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all ${
                   player2
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-100 text-gray-400"
+                    ? "bg-gradient-to-b from-[#c89b3c] to-[#785a28] border-[#c8aa6e] text-[#0a0e1a]"
+                    : "bg-[#151c2f] border-[#463714] text-[#5b5a56]"
                 }`}
               >
                 {player2 ? (
-                  <CheckCircle className="w-8 h-8" />
+                  <Shield className="w-7 h-7" />
                 ) : (
-                  <Users className="w-8 h-8" />
+                  <Users className="w-7 h-7" />
                 )}
               </div>
               <div>
-                <h3 className="font-bold text-gray-900">
-                  {player2 ? player2.username : "Joueur 2"}
+                <h3 className="font-display font-bold text-[#f0e6d2] text-lg">
+                  {player2 ? player2.username : "Invocateur 2"}
                 </h3>
-                <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">
-                  {player2 ? "Prêt" : "En attente du badge..."}
+                <p className={`text-xs uppercase tracking-[0.2em] font-semibold mt-1 ${
+                  player2 ? "text-[#c8aa6e]" : "text-[#5b5a56]"
+                }`}>
+                  {player2 ? "✦ Prêt" : "En attente..."}
                 </p>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Scan indicator */}
         <div className="flex flex-col items-center justify-center space-y-3">
           <div className="relative flex items-center justify-center">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75"></span>
-            <Wifi className="relative text-indigo-600 w-8 h-8" />
+            <span className="absolute inline-flex h-8 w-8 animate-ping rounded-full bg-[#c8aa6e] opacity-20"></span>
+            <Wifi className="relative text-[#c8aa6e] w-7 h-7" />
           </div>
-          <p className="text-xs text-indigo-400 font-medium uppercase tracking-wider">
-            Scanner vos badges pour rejoindre le jeu
+          <p className="text-xs text-[#785a28] font-medium uppercase tracking-[0.2em]">
+            Scannez vos badges pour rejoindre l&apos;arène
           </p>
         </div>
+
+        {/* Séparateur */}
+        <div className="flex items-center gap-4 mt-8">
+          <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent to-[#463714]" />
+          <span className="text-xs text-[#5b5a56] uppercase tracking-[0.2em] font-display">ou</span>
+          <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-[#463714]" />
+        </div>
+
+        {/* Bouton local */}
+        <button
+          onClick={() => router.push("/game?mode=local")}
+          className="mt-6 w-full btn-rift px-6 py-3.5 rounded-lg flex items-center justify-center gap-3 text-sm"
+        >
+          <Swords className="w-5 h-5" />
+          Duel Local
+        </button>
+
+        {/* Bottom decorative border */}
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#463714] to-transparent" />
       </div>
     </div>
   );
@@ -186,7 +213,15 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen rift-bg flex items-center justify-center">
+          <p className="text-[#a09b8c] font-display tracking-widest">
+            Chargement...
+          </p>
+        </div>
+      }
+    >
       <HomeContent />
     </Suspense>
   );
