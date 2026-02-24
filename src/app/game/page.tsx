@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   LogOut,
@@ -11,6 +11,8 @@ import {
   Swords,
   Shield,
 } from "lucide-react";
+import { useButtonEvents } from "@/hooks/useButtonEvents";
+import type { ButtonAction } from "@/lib/button-emitter";
 
 interface User {
   id: string;
@@ -42,6 +44,54 @@ function GameContent() {
   const [winner, setWinner] = useState<User | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<Date | null>(null);
+
+  // --- LOGOUT (useCallback so physical buttons can reference it) ---
+  const handleLogout = useCallback(async () => {
+    if (!isDemo) {
+      if (scanId)
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scanId }),
+        });
+      if (scan2Id)
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scanId: scan2Id }),
+        });
+    }
+    router.push(borne ? `/?borne=${borne}` : "/");
+  }, [isDemo, scanId, scan2Id, router, borne]);
+
+  // --- PHYSICAL BUTTON HANDLING ---
+  const handleButtonPress = useCallback(
+    (action: ButtonAction) => {
+      if (gameState !== "PLAYING" && action !== "back") return;
+
+      switch (action) {
+        case "increment_p1":
+          setScore1((s) => s + 1);
+          break;
+        case "increment_p2":
+          setScore2((s) => s + 1);
+          break;
+        case "decrement_p1":
+          setScore1((s) => Math.max(0, s - 1));
+          break;
+        case "decrement_p2":
+          setScore2((s) => Math.max(0, s - 1));
+          break;
+        case "back":
+          handleLogout();
+          break;
+      }
+    },
+    [gameState, handleLogout],
+  );
+
+  // Listen for physical button events on this borne
+  useButtonEvents(handleButtonPress, borne);
 
   useEffect(() => {
     // --- DEMO MODE (temporaire) ---
@@ -126,24 +176,6 @@ function GameContent() {
     } catch (e) {
       console.error("Erreur sauvegarde:", e);
     }
-  };
-
-  const handleLogout = async () => {
-    if (!isDemo) {
-      if (scanId)
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scanId }),
-        });
-      if (scan2Id)
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scanId: scan2Id }),
-        });
-    }
-    router.push(borne ? `/?borne=${borne}` : "/");
   };
 
   const formatTime = (seconds: number) => {
