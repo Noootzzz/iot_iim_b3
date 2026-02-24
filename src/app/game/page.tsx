@@ -67,7 +67,13 @@ function GameContent() {
   // --- PHYSICAL BUTTON HANDLING ---
   const handleButtonPress = useCallback(
     (action: ButtonAction) => {
-      if (gameState !== "PLAYING" && action !== "back") return;
+      // When game is finished, ANY button press returns to lobby
+      if (gameState === "FINISHED") {
+        handleLogout();
+        return;
+      }
+
+      if (gameState !== "PLAYING") return;
 
       switch (action) {
         case "increment_p1":
@@ -274,7 +280,20 @@ function GameContent() {
             <Shield className="w-3.5 h-3.5" />
             Retour au lobby
           </button>
+
+          <p className="text-[9px] text-[#5b5a56] mt-1 font-display tracking-wider">
+            Appuyez sur n&apos;importe quel bouton
+          </p>
         </div>
+
+        {/* Borne indicator */}
+        {borne && (
+          <div className="absolute bottom-3 right-4">
+            <span className="text-[9px] text-[#5b5a56]/60 font-mono tracking-wider">
+              {borne}
+            </span>
+          </div>
+        )}
 
         {/* Bottom line */}
         <div className="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-[#785a28]/30 to-transparent" />
@@ -286,8 +305,9 @@ function GameContent() {
   return (
     <div className="w-[800px] h-[480px] rift-bg text-[#f0e6d2] flex flex-col overflow-hidden relative">
       {/* Header */}
-      <header className="bg-[#010a13]/80 backdrop-blur-sm border-b border-[#785a28]/30 px-4 py-2 flex justify-between items-center shrink-0">
-        <div className="flex items-center gap-2">
+      <header className="bg-[#010a13]/80 backdrop-blur-sm border-b border-[#785a28]/30 px-4 py-2 flex items-center justify-center relative shrink-0">
+        {/* Logo left */}
+        <div className="absolute left-4 flex items-center gap-2">
           <img
             src="/Riftbound_icon.png"
             alt="Riftbound"
@@ -296,23 +316,20 @@ function GameContent() {
           <h1 className="font-display text-xs font-bold text-[#c8aa6e] tracking-[0.15em] uppercase">
             Riftbound
           </h1>
+          {borne && (
+            <span className="text-[9px] text-[#5b5a56]/60 font-mono ml-1">
+              {borne}
+            </span>
+          )}
         </div>
 
-        {/* Timer */}
+        {/* Timer centered */}
         <div className="flex items-center gap-1.5 bg-[#010a13] border border-[#785a28]/40 px-4 py-1 rounded-full">
           <Timer className="w-3 h-3 text-[#785a28]" />
           <span className="text-sm font-mono font-bold text-[#c8aa6e] tracking-wider">
             {formatTime(elapsed)}
           </span>
         </div>
-
-        <button
-          onClick={handleLogout}
-          className="p-1.5 hover:bg-[#0a1628] rounded-md border border-transparent hover:border-[#785a28]/30 text-[#5b5a56] hover:text-[#a09b8c] transition-all"
-          title="Quitter"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
       </header>
 
       {/* Score target */}
