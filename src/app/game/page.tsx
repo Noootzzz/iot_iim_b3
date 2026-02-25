@@ -22,7 +22,7 @@ function GameContent() {
   const player2Id = searchParams.get("player2Id");
   const scan2Id = searchParams.get("scan2Id");
   const borne = searchParams.get("borne");
-  const isDemo = searchParams.get("mode") === "demo";
+
 
   const [user, setUser] = useState<User | null>(null);
   const [player2, setPlayer2] = useState<User | null>(null);
@@ -37,22 +37,20 @@ function GameContent() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleLogout = useCallback(async () => {
-    if (!isDemo) {
-      if (scanId)
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scanId }),
-        });
-      if (scan2Id)
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scanId: scan2Id }),
-        });
-    }
+    if (scanId)
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanId }),
+      });
+    if (scan2Id)
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanId: scan2Id }),
+      });
     router.push(borne ? `/?borne=${borne}` : "/");
-  }, [isDemo, scanId, scan2Id, router, borne]);
+  }, [scanId, scan2Id, router, borne]);
 
   const handleButtonPress = useCallback(
     (action: ButtonAction) => {
@@ -87,13 +85,6 @@ function GameContent() {
   useButtonEvents(handleButtonPress, borne);
 
   useEffect(() => {
-    if (isDemo) {
-      setUser({ id: "demo-1", username: "Player 1" });
-      setPlayer2({ id: "demo-2", username: "Player 2" });
-      setGameState("PLAYING");
-      return;
-    }
-
     if (!userId || !scanId || !player2Id || !scan2Id) {
       router.push(borne ? `/?borne=${borne}` : "/");
       return;
@@ -117,7 +108,7 @@ function GameContent() {
     };
 
     verifyAndStart();
-  }, [userId, scanId, player2Id, scan2Id, isDemo, router]);
+  }, [userId, scanId, player2Id, scan2Id, router, borne]);
 
   useEffect(() => {
     if (gameState === "PLAYING") {
@@ -147,8 +138,6 @@ function GameContent() {
     if (timerRef.current) clearInterval(timerRef.current);
     setWinner(gameWinner);
     setGameState("FINISHED");
-
-    if (isDemo) return;
 
     try {
       await fetch("/api/game-sessions", {

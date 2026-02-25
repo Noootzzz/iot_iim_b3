@@ -138,14 +138,16 @@ export default function AdminDashboard() {
   const [pendingRequests, setPendingRequests] = useState<RegistrationRequest[]>(
     [],
   );
+  const [historyRequests, setHistoryRequests] = useState<RegistrationRequest[]>([]);
 
   const fetchAll = useCallback(async () => {
     try {
-      const [statsRes, usersRes, sessionsRes, requestsRes] = await Promise.all([
+      const [statsRes, usersRes, sessionsRes, requestsRes, historyRes] = await Promise.all([
         fetch("/api/admin/stats"),
         fetch("/api/admin/users"),
         fetch("/api/admin/sessions"),
         fetch("/api/registration-requests"),
+        fetch("/api/registration-requests/history"),
       ]);
 
       if (statsRes.status === 401 || usersRes.status === 401) {
@@ -153,18 +155,20 @@ export default function AdminDashboard() {
         return;
       }
 
-      const [statsData, usersData, sessionsData, requestsData] =
+      const [statsData, usersData, sessionsData, requestsData, historyData] =
         await Promise.all([
           statsRes.json(),
           usersRes.json(),
           sessionsRes.json(),
           requestsRes.json(),
+          historyRes.json(),
         ]);
 
       setStats(statsData.stats);
       setAllUsers(usersData.users || []);
       setAllSessions(sessionsData.sessions || []);
       setPendingRequests(requestsData.requests || []);
+      setHistoryRequests(historyData.requests || []);
     } catch {
       setError("Impossible de charger les données.");
     } finally {
@@ -313,6 +317,7 @@ export default function AdminDashboard() {
         {tab === "requests" && (
           <RegistrationRequestsTab
             requests={pendingRequests}
+            history={historyRequests}
             onRefresh={fetchAll}
           />
         )}
@@ -1099,11 +1104,14 @@ function SessionsTab({
 
 function RegistrationRequestsTab({
   requests,
+  history,
   onRefresh,
 }: {
   requests: RegistrationRequest[];
+  history: RegistrationRequest[];
   onRefresh: () => Promise<void>;
 }) {
+  const [view, setView] = useState<"pending" | "history">("pending");
   const [formData, setFormData] = useState<
     Record<number, { username: string; email: string }>
   >({});
@@ -1203,34 +1211,65 @@ function RegistrationRequestsTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Bell className="w-4 h-4 text-neutral-400" />
-          <h3 className="text-sm font-medium text-neutral-600">
-            Demandes d&apos;inscription en attente
-          </h3>
-          {requests.length > 0 && (
-            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-              {requests.length}
-            </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center justify-between w-full sm:w-auto">
+          <div className="flex items-center gap-2">
+            <Bell className="w-4 h-4 text-neutral-400" />
+            <h3 className="text-sm font-medium text-neutral-600">
+              Demandes d&apos;inscription
+            </h3>
+            {requests.length > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                {requests.length} en attente
+              </span>
+            )}
+          </div>
+          {msg && (
+            <span className="text-xs text-emerald-500 font-medium sm:hidden ml-4">{msg}</span>
           )}
         </div>
-        {msg && (
-          <span className="text-xs text-emerald-500 font-medium">{msg}</span>
-        )}
+        
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 bg-neutral-100 p-1 rounded-md">
+            <button
+              onClick={() => setView("pending")}
+              className={`px-3 py-1 text-xs font-medium rounded ${
+                view === "pending"
+                  ? "bg-white text-neutral-900 shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-700"
+              }`}
+            >
+              En attente
+            </button>
+            <button
+              onClick={() => setView("history")}
+              className={`px-3 py-1 text-xs font-medium rounded ${
+                view === "history"
+                  ? "bg-white text-neutral-900 shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-700"
+              }`}
+            >
+              Historique
+            </button>
+          </div>
+          {msg && (
+            <span className="hidden sm:inline-block text-xs text-emerald-500 font-medium">{msg}</span>
+          )}
+        </div>
       </div>
 
-      {requests.length === 0 ? (
-        <div className="bg-white border border-neutral-200 rounded-lg p-8 text-center">
-          <UserPlus className="w-8 h-8 text-neutral-200 mx-auto mb-2" />
-          <p className="text-neutral-400 text-sm">Aucune demande en attente</p>
-          <p className="text-neutral-300 text-xs mt-1">
-            Les nouvelles demandes apparaîtront ici en temps réel
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {requests.map((req) => {
+      {view === "pending" ? (
+        requests.length === 0 ? (
+          <div className="bg-white border border-neutral-200 rounded-lg p-8 text-center">
+            <UserPlus className="w-8 h-8 text-neutral-200 mx-auto mb-2" />
+            <p className="text-neutral-400 text-sm">Aucune demande en attente</p>
+            <p className="text-neutral-300 text-xs mt-1">
+              Les nouvelles demandes apparaîtront ici en temps réel
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {requests.map((req) => {
             const form = getForm(req.id);
             const isSubmitting = submitting === req.id;
             const reqError = error[req.id];
@@ -1330,6 +1369,59 @@ function RegistrationRequestsTab({
             );
           })}
         </div>
+        )
+      ) : (
+        history.length === 0 ? (
+          <div className="bg-white border border-neutral-200 rounded-lg p-8 text-center">
+            <p className="text-neutral-400 text-sm">Aucun historique disponible</p>
+          </div>
+        ) : (
+          <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-neutral-400 border-b border-neutral-100">
+                  <th className="text-left py-2.5 px-4 font-medium">Machine / Créateur</th>
+                  <th className="text-left py-2.5 px-3 font-medium">RFID</th>
+                  <th className="text-center py-2.5 px-3 font-medium">Statut</th>
+                  <th className="text-right py-2.5 px-4 font-medium">Date de résolution</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-50">
+                {history.map((req) => (
+                  <tr key={req.id} className="hover:bg-neutral-50/50 transition">
+                    <td className="py-3 px-4">
+                      <div className="font-medium text-neutral-800">
+                        {req.machineId || "—"}
+                      </div>
+                      {req.createdUserId && (
+                        <div className="text-[10px] text-neutral-400 mt-0.5" title={req.createdUserId}>
+                          {req.createdUserId.slice(0, 8)}...
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="font-mono text-xs text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded">
+                        {req.rfidUuid}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        req.status === 'approved' 
+                          ? 'bg-emerald-50 text-emerald-600'
+                          : 'bg-red-50 text-red-600'
+                      }`}>
+                        {req.status === 'approved' ? 'APPROUVÉ' : 'REJETÉ'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right text-xs text-neutral-500 tabular-nums">
+                      {fmtDate(req.resolvedAt || req.createdAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
     </div>
   );

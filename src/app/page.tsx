@@ -302,15 +302,6 @@ function HomeContent() {
         </p>
       </div>
 
-      <div className="mt-5">
-        <button
-          onClick={() => router.push("/game?mode=demo")}
-          className="btn-lol-ghost px-4 py-1.5 rounded text-[9px]"
-        >
-          Test Game →
-        </button>
-      </div>
-
       <div className="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-[#785a28]/30 to-transparent" />
     </div>
   );
