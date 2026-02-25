@@ -1,13 +1,19 @@
 "use client";
 
 import { useRfidPolling } from "@/hooks/useRfidPolling";
-import { Users, Wifi, Shield, Swords } from "lucide-react";
+import { Users, Wifi, Shield, Swords, Loader2, Clock } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 
 interface ConnectedPlayer {
   id: string;
   username: string;
+}
+
+interface PendingRequest {
+  id: number;
+  rfidUuid: string;
+  slot: "1" | "2";
 }
 
 function HomeContent() {
@@ -22,6 +28,11 @@ function HomeContent() {
 
   const [player1, setPlayer1] = useState<ConnectedPlayer | null>(null);
   const [player2, setPlayer2] = useState<ConnectedPlayer | null>(null);
+  const [pendingRequest, setPendingRequest] = useState<PendingRequest | null>(
+    null,
+  );
+  const [pendingRejected, setPendingRejected] = useState(false);
+  const sseRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (p1Id) {
@@ -52,21 +63,75 @@ function HomeContent() {
     }
   }, [p1Id, p2Id, s1Id, s2Id, router, borne]);
 
-  const handleScan = (scan: any) => {
-    if (!scan.known || !scan.user) {
-      const currentState = new URLSearchParams();
-      if (p1Id) {
-        currentState.set("p1", p1Id);
-        currentState.set("scan1", s1Id!);
-      }
-      const targetSlot = !p1Id ? "1" : "2";
-      currentState.set("slot", targetSlot);
-      currentState.set("returnToLobby", "true");
-      if (borne) currentState.set("borne", borne);
+  // SSE listener pour attendre la résolution de la demande d'inscription
+  useEffect(() => {
+    if (!pendingRequest) return;
 
-      router.push(
-        `/register?rfid=${scan.rfidUuid}&scanId=${scan.id}&${currentState.toString()}`,
-      );
+    const url = `/api/registration-requests/stream?requestId=${pendingRequest.id}`;
+    const eventSource = new EventSource(url);
+    sseRef.current = eventSource;
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.status === "approved" && data.user && data.scanId) {
+        // Compte créé ! On ajoute le joueur au lobby
+        const borneStr = borne ? `&borne=${borne}` : "";
+
+        if (pendingRequest.slot === "1") {
+          router.push(
+            `/?p1=${data.user.id}&scan1=${data.scanId}${borneStr}`,
+          );
+        } else {
+          router.push(
+            `/?p1=${p1Id}&scan1=${s1Id}&p2=${data.user.id}&scan2=${data.scanId}${borneStr}`,
+          );
+        }
+        setPendingRequest(null);
+      } else if (data.status === "rejected") {
+        setPendingRequest(null);
+        setPendingRejected(true);
+        setTimeout(() => setPendingRejected(false), 4000);
+      }
+    };
+
+    eventSource.onerror = () => {
+      console.warn("Registration SSE connection lost, reconnecting...");
+    };
+
+    return () => {
+      eventSource.close();
+      sseRef.current = null;
+    };
+  }, [pendingRequest, p1Id, s1Id, borne, router]);
+
+  const handleScan = async (scan: any) => {
+    if (!scan.known || !scan.user) {
+      // Badge inconnu → Créer une demande d'inscription pour l'admin
+      const targetSlot: "1" | "2" = !p1Id ? "1" : "2";
+
+      try {
+        const res = await fetch("/api/registration-requests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rfidUuid: scan.rfidUuid,
+            scanId: scan.id,
+            machineId: borne || null,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setPendingRequest({
+            id: data.request.id,
+            rfidUuid: scan.rfidUuid,
+            slot: targetSlot,
+          });
+        }
+      } catch (err) {
+        console.error("Erreur création demande:", err);
+      }
       return;
     }
 
@@ -92,6 +157,50 @@ function HomeContent() {
     <div className="w-[800px] h-[480px] rift-bg flex flex-col items-center justify-center relative">
       {/* Top gold line */}
       <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-[#c8aa6e]/40 to-transparent" />
+
+      {/* ─── OVERLAY : En attente de l'admin ─── */}
+      {pendingRequest && (
+        <div className="absolute inset-0 z-50 bg-[#010a13]/90 backdrop-blur-sm flex flex-col items-center justify-center">
+          <div className="card-hextech corner-decor w-[380px] p-6 text-center">
+            <div className="relative mx-auto w-14 h-14 mb-4">
+              <span className="absolute inset-0 rounded-full border-2 border-[#c8aa6e]/30 animate-ping" />
+              <div className="relative w-14 h-14 rounded-full bg-[#0a1628] border border-[#785a28] flex items-center justify-center">
+                <Clock className="w-6 h-6 text-[#c8aa6e] animate-pulse" />
+              </div>
+            </div>
+            <h2 className="font-display text-base font-bold text-[#c8aa6e] tracking-wider mb-2">
+              Badge non enregistré
+            </h2>
+            <p className="text-[#a09b8c] text-xs mb-3">
+              Une demande de création de compte a été envoyée à
+              l&apos;administrateur.
+            </p>
+            <div className="bg-[#0a1628] border border-[#785a28]/30 rounded-lg p-3 mb-4">
+              <p className="text-[10px] text-[#785a28] uppercase tracking-[0.2em] font-display mb-1">
+                Badge RFID
+              </p>
+              <p className="text-[#c8aa6e] font-mono text-xs tracking-wider">
+                {pendingRequest.rfidUuid}
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 text-[#785a28] animate-spin" />
+              <p className="text-[10px] text-[#5b5a56] uppercase tracking-[0.2em] font-display">
+                En attente de validation...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Notification de rejet ─── */}
+      {pendingRejected && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-[#e84057]/10 border border-[#e84057]/30 rounded-lg px-5 py-2.5 animate-fadeIn">
+          <p className="text-[#e84057] text-xs font-display tracking-wider">
+            Demande refusée par l&apos;administrateur
+          </p>
+        </div>
+      )}
 
       {/* Logo + Title */}
       <div className="flex flex-col items-center mb-5">

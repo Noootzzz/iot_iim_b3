@@ -13,6 +13,10 @@ import {
   X,
   Check,
   RefreshCw,
+  Bell,
+  CreditCard,
+  UserPlus,
+  Loader2,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────
@@ -54,7 +58,18 @@ interface Stats {
   [key: string]: unknown;
 }
 
-type Tab = "overview" | "users" | "sessions";
+interface RegistrationRequest {
+  id: number;
+  rfidUuid: string;
+  scanId: number | null;
+  machineId: string | null;
+  status: "pending" | "approved" | "rejected";
+  createdUserId: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+type Tab = "overview" | "users" | "sessions" | "requests";
 
 // ─── Helpers ─────────────────────────────────────────────────
 function fmt(s: number) {
@@ -124,13 +139,15 @@ export default function AdminDashboard() {
   const [allSessions, setAllSessions] = useState<AdminSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pendingRequests, setPendingRequests] = useState<RegistrationRequest[]>([]);
 
   const fetchAll = useCallback(async () => {
     try {
-      const [statsRes, usersRes, sessionsRes] = await Promise.all([
+      const [statsRes, usersRes, sessionsRes, requestsRes] = await Promise.all([
         fetch("/api/admin/stats"),
         fetch("/api/admin/users"),
         fetch("/api/admin/sessions"),
+        fetch("/api/registration-requests"),
       ]);
 
       if (statsRes.status === 401 || usersRes.status === 401) {
@@ -138,15 +155,17 @@ export default function AdminDashboard() {
         return;
       }
 
-      const [statsData, usersData, sessionsData] = await Promise.all([
+      const [statsData, usersData, sessionsData, requestsData] = await Promise.all([
         statsRes.json(),
         usersRes.json(),
         sessionsRes.json(),
+        requestsRes.json(),
       ]);
 
       setStats(statsData.stats);
       setAllUsers(usersData.users || []);
       setAllSessions(sessionsData.sessions || []);
+      setPendingRequests(requestsData.requests || []);
     } catch {
       setError("Impossible de charger les données.");
     } finally {
@@ -157,6 +176,30 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  // SSE : écoute les nouvelles demandes d'inscription en temps réel
+  useEffect(() => {
+    const eventSource = new EventSource("/api/registration-requests/admin-stream");
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "new-request" && data.request) {
+          setPendingRequests((prev) => {
+            // Éviter les doublons
+            if (prev.some((r) => r.id === data.request.id)) return prev;
+            return [...prev, data.request];
+          });
+        }
+      } catch {}
+    };
+
+    eventSource.onerror = () => {
+      console.warn("Admin registration SSE lost, reconnecting...");
+    };
+
+    return () => eventSource.close();
+  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -191,8 +234,9 @@ export default function AdminDashboard() {
     );
   }
 
-  const tabs: { key: Tab; label: string }[] = [
+  const tabs: { key: Tab; label: string; badge?: number }[] = [
     { key: "overview", label: "Vue d'ensemble" },
+    { key: "requests", label: "Demandes", badge: pendingRequests.length },
     { key: "users", label: `Joueurs (${allUsers.length})` },
     { key: "sessions", label: `Parties (${allSessions.length})` },
   ];
@@ -241,13 +285,18 @@ export default function AdminDashboard() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`py-3 text-sm border-b-2 transition ${
+              className={`py-3 text-sm border-b-2 transition flex items-center gap-1.5 ${
                 tab === t.key
                   ? "border-neutral-900 text-neutral-900 font-medium"
                   : "border-transparent text-neutral-400 hover:text-neutral-600"
               }`}
             >
               {t.label}
+              {t.badge !== undefined && t.badge > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                  {t.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -260,6 +309,12 @@ export default function AdminDashboard() {
             users={allUsers}
             sessions={allSessions}
             onSwitchTab={setTab}
+          />
+        )}
+        {tab === "requests" && (
+          <RegistrationRequestsTab
+            requests={pendingRequests}
+            onRefresh={fetchAll}
           />
         )}
         {tab === "users" && <UsersTab users={allUsers} onRefresh={fetchAll} />}
@@ -1046,6 +1101,248 @@ function SessionsTab({
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── REGISTRATION REQUESTS ──────────────────────────────────
+function RegistrationRequestsTab({
+  requests,
+  onRefresh,
+}: {
+  requests: RegistrationRequest[];
+  onRefresh: () => Promise<void>;
+}) {
+  const [formData, setFormData] = useState<
+    Record<number, { username: string; email: string }>
+  >({});
+  const [submitting, setSubmitting] = useState<number | null>(null);
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState<Record<number, string>>({});
+
+  const getForm = (id: number) =>
+    formData[id] || { username: "", email: "" };
+
+  const updateForm = (
+    id: number,
+    field: "username" | "email",
+    value: string,
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [id]: { ...getForm(id), [field]: value },
+    }));
+  };
+
+  const approve = async (requestId: number) => {
+    const form = getForm(requestId);
+    if (!form.username.trim()) {
+      setError((prev) => ({ ...prev, [requestId]: "Le pseudo est requis" }));
+      return;
+    }
+
+    setSubmitting(requestId);
+    setError((prev) => {
+      const copy = { ...prev };
+      delete copy[requestId];
+      return copy;
+    });
+
+    try {
+      const res = await fetch("/api/registration-requests/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          username: form.username.trim(),
+          email: form.email.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError((prev) => ({
+          ...prev,
+          [requestId]: data.error || "Erreur",
+        }));
+        return;
+      }
+
+      setMsg(`Compte "${form.username}" créé !`);
+      setTimeout(() => setMsg(""), 3000);
+
+      setFormData((prev) => {
+        const copy = { ...prev };
+        delete copy[requestId];
+        return copy;
+      });
+
+      await onRefresh();
+    } catch {
+      setError((prev) => ({
+        ...prev,
+        [requestId]: "Erreur réseau",
+      }));
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
+  const reject = async (requestId: number) => {
+    setSubmitting(requestId);
+
+    try {
+      const res = await fetch("/api/registration-requests/reject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId }),
+      });
+
+      if (res.ok) {
+        setMsg("Demande refusée");
+        setTimeout(() => setMsg(""), 3000);
+        await onRefresh();
+      }
+    } catch {
+      console.error("Erreur rejet");
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Bell className="w-4 h-4 text-neutral-400" />
+          <h3 className="text-sm font-medium text-neutral-600">
+            Demandes d&apos;inscription en attente
+          </h3>
+          {requests.length > 0 && (
+            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              {requests.length}
+            </span>
+          )}
+        </div>
+        {msg && (
+          <span className="text-xs text-emerald-500 font-medium">{msg}</span>
+        )}
+      </div>
+
+      {requests.length === 0 ? (
+        <div className="bg-white border border-neutral-200 rounded-lg p-8 text-center">
+          <UserPlus className="w-8 h-8 text-neutral-200 mx-auto mb-2" />
+          <p className="text-neutral-400 text-sm">
+            Aucune demande en attente
+          </p>
+          <p className="text-neutral-300 text-xs mt-1">
+            Les nouvelles demandes apparaîtront ici en temps réel
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {requests.map((req) => {
+            const form = getForm(req.id);
+            const isSubmitting = submitting === req.id;
+            const reqError = error[req.id];
+
+            return (
+              <div
+                key={req.id}
+                className="bg-white border border-neutral-200 rounded-lg p-4 animate-fadeIn"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
+                      <CreditCard className="w-4 h-4 text-amber-600" />
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="text-sm font-medium text-neutral-800">
+                          Nouveau badge détecté
+                        </p>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-xs text-neutral-400 font-mono">
+                            {req.rfidUuid}
+                          </span>
+                          {req.machineId && (
+                            <span className="text-[10px] text-neutral-300 bg-neutral-50 px-1.5 py-0.5 rounded">
+                              {req.machineId}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-neutral-300">
+                            {timeAgo(req.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-end gap-2 mt-3">
+                      <div className="flex-1">
+                        <label className="block text-[10px] text-neutral-400 uppercase tracking-wide mb-1 font-medium">
+                          Pseudo
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Pseudo du joueur"
+                          value={form.username}
+                          onChange={(e) =>
+                            updateForm(req.id, "username", e.target.value)
+                          }
+                          disabled={isSubmitting}
+                          className="w-full border border-neutral-200 rounded-md px-2.5 py-1.5 text-sm placeholder-neutral-300 focus:outline-none focus:border-neutral-400 disabled:opacity-50"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] text-neutral-400 uppercase tracking-wide mb-1 font-medium">
+                          Email (optionnel)
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="email@exemple.com"
+                          value={form.email}
+                          onChange={(e) =>
+                            updateForm(req.id, "email", e.target.value)
+                          }
+                          disabled={isSubmitting}
+                          className="w-full border border-neutral-200 rounded-md px-2.5 py-1.5 text-sm placeholder-neutral-300 focus:outline-none focus:border-neutral-400 disabled:opacity-50"
+                        />
+                      </div>
+                      <button
+                        onClick={() => approve(req.id)}
+                        disabled={isSubmitting}
+                        className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-md text-sm font-medium transition disabled:opacity-50 shrink-0"
+                      >
+                        {isSubmitting ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        Créer
+                      </button>
+                      <button
+                        onClick={() => reject(req.id)}
+                        disabled={isSubmitting}
+                        className="flex items-center gap-1.5 bg-neutral-100 hover:bg-red-50 text-neutral-400 hover:text-red-500 px-3 py-1.5 rounded-md text-sm transition disabled:opacity-50 shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {reqError && (
+                      <p className="text-xs text-red-500 mt-1.5">{reqError}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

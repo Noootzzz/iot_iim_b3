@@ -33,6 +33,28 @@ export const scans = pgTable("scans", {
   revoked: boolean("revoked").default(false).notNull(),
 });
 
+// --- ENUM STATUT DEMANDE INSCRIPTION ---
+export const registrationRequestStatusEnum = pgEnum(
+  "registration_request_status",
+  ["pending", "approved", "rejected"],
+);
+
+// --- TABLE DEMANDES D'INSCRIPTION ---
+export const registrationRequests = pgTable("registration_requests", {
+  id: serial("id").primaryKey(),
+  rfidUuid: text("rfid_uuid").notNull(),
+  scanId: integer("scan_id"),
+  machineId: text("machine_id"),
+  status: registrationRequestStatusEnum("status")
+    .notNull()
+    .default("pending"),
+  createdUserId: uuid("created_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
 // --- TABLE SESSIONS DE JEU (1v1) ---
 export const gameSessions = pgTable("game_sessions", {
   id: serial("id").primaryKey(),
