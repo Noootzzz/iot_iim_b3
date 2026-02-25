@@ -11,14 +11,12 @@ async function requireAdmin(request: NextRequest) {
   return payload?.role === "admin";
 }
 
-// GET /api/admin/users — Liste complète des joueurs avec stats
 export async function GET(request: NextRequest) {
   if (!(await requireAdmin(request))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
   try {
-    // All users
     const allUsers = await db
       .select({
         id: users.id,
@@ -31,7 +29,6 @@ export async function GET(request: NextRequest) {
       .from(users)
       .orderBy(desc(users.createdAt));
 
-    // Wins per user
     const winsData = await db
       .select({
         userId: gameSessions.winnerId,
@@ -44,7 +41,6 @@ export async function GET(request: NextRequest) {
       winsData.filter((w) => w.userId).map((w) => [w.userId!, w.wins]),
     );
 
-    // Games played per user (as player1 or player2)
     const gamesAsP1 = await db
       .select({
         userId: gameSessions.player1Id,
@@ -69,7 +65,6 @@ export async function GET(request: NextRequest) {
       gamesMap[g.userId] = (gamesMap[g.userId] || 0) + g.games;
     }
 
-    // Total points per user
     const pointsAsP1 = await db
       .select({
         userId: gameSessions.player1Id,
@@ -112,7 +107,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PUT /api/admin/users — Modifier un utilisateur
 export async function PUT(request: NextRequest) {
   if (!(await requireAdmin(request))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -151,7 +145,6 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE /api/admin/users — Supprimer un utilisateur
 export async function DELETE(request: NextRequest) {
   if (!(await requireAdmin(request))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });

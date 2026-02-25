@@ -4,7 +4,6 @@ import { verifyToken, COOKIE_NAME } from "@/lib/admin-auth";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Only protect /admin routes (but not /admin/login itself)
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
     const token = request.cookies.get(COOKIE_NAME)?.value;
 

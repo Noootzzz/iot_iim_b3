@@ -4,7 +4,6 @@ import { registrationRequests, users, scans } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { registrationEmitter } from "@/lib/registration-emitter";
 
-// POST — L'admin approuve une demande et crée le compte utilisateur
 export async function POST(request: NextRequest) {
   try {
     const { requestId, username, email } = await request.json();
@@ -16,7 +15,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Récupérer la demande
     const [regRequest] = await db
       .select()
       .from(registrationRequests)
@@ -37,7 +35,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier que le pseudo n'est pas déjà pris
     const existingName = await db
       .select()
       .from(users)
@@ -51,7 +48,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier que le badge n'est pas déjà associé
     const existingRfid = await db
       .select()
       .from(users)
@@ -65,7 +61,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier l'email si fourni
     if (email) {
       const existingEmail = await db
         .select()
@@ -81,7 +76,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Créer l'utilisateur
     const [newUser] = await db
       .insert(users)
       .values({
@@ -91,7 +85,6 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    // Créer un nouveau scan frais pour la borne (TTL 5 min)
     const [newScan] = await db
       .insert(scans)
       .values({
@@ -102,7 +95,6 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    // Mettre à jour la demande
     await db
       .update(registrationRequests)
       .set({
@@ -112,7 +104,6 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(registrationRequests.id, Number(requestId)));
 
-    // Notifier la borne via SSE
     registrationEmitter.emit(`request-resolved:${requestId}`, {
       status: "approved",
       user: { id: newUser.id, username: newUser.username },

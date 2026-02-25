@@ -3,7 +3,6 @@ import { buttonEmitter, type ButtonEvent } from "@/lib/button-emitter";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/buttons/stream?machineId=ecran_1 — SSE stream for button events
 export async function GET(request: NextRequest) {
   const machineId = request.nextUrl.searchParams.get("machineId");
 
@@ -11,7 +10,6 @@ export async function GET(request: NextRequest) {
     start(controller) {
       const encoder = new TextEncoder();
 
-      // Keep-alive every 15s
       const keepAlive = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(": keep-alive\n\n"));
@@ -21,7 +19,6 @@ export async function GET(request: NextRequest) {
       }, 15_000);
 
       const onButton = (event: ButtonEvent) => {
-        // Filter by machineId if specified
         if (machineId && event.machineId !== machineId) return;
 
         try {
@@ -38,7 +35,6 @@ export async function GET(request: NextRequest) {
         try {
           controller.close();
         } catch {
-          // Already closed
         }
       };
 

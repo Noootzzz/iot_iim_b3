@@ -3,8 +3,6 @@ import { registrationEmitter } from "@/lib/registration-emitter";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/registration-requests/stream?requestId=123
-// SSE pour la borne — attend la résolution d'une demande spécifique
 export async function GET(request: NextRequest) {
   const requestId = request.nextUrl.searchParams.get("requestId");
 
@@ -32,9 +30,7 @@ export async function GET(request: NextRequest) {
             encoder.encode(`data: ${JSON.stringify(data)}\n\n`),
           );
         } catch {
-          /* noop */
         }
-        // Fermer la connexion après résolution
         setTimeout(() => cleanup(), 100);
       };
 

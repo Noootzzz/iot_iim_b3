@@ -1,8 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  /* League of Legends inspired palette */
-  --bg-deep: #010a13;
+--bg-deep: #010a13;
   --bg-primary: #0a1628;
   --bg-secondary: #0a2540;
   --bg-card: #091428;
@@ -29,8 +28,6 @@
   --border-dark: #1e2328;
   --border-blue: #005a82;
 }
-
-/* Display font */
 .font-display {
   font-family: var(--font-sora), system-ui, sans-serif;
 }
@@ -44,24 +41,18 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
-/* Gold text gradient like LoL titles */
 .gold-gradient {
   background: linear-gradient(180deg, #f0e6d2 0%, #c8aa6e 40%, #785a28 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-
-/* Blue glow text */
 .blue-glow {
   color: var(--blue-accent);
   text-shadow:
     0 0 10px rgba(10, 200, 185, 0.4),
     0 0 30px rgba(10, 200, 185, 0.15);
 }
-
-/* LoL-style card with hextech feel */
 .card-hextech {
   background: linear-gradient(
     180deg,
@@ -70,20 +61,16 @@ body {
   );
   border: 1px solid var(--border-gold);
   position: relative;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--gold),
+    transparent
+  );
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: top center;
 }
-
-.card-hextech::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
-  opacity: 0.6;
-}
-
-/* LoL-style primary button - gold */
 .btn-lol {
   background: linear-gradient(180deg, #c89b3c 0%, #785a28 100%);
   color: #010a13;
@@ -106,8 +93,6 @@ body {
 .btn-lol:active {
   transform: scale(0.97);
 }
-
-/* Ghost/secondary button */
 .btn-lol-ghost {
   background: transparent;
   border: 1px solid var(--border-gold);
@@ -126,8 +111,6 @@ body {
   background: rgba(200, 155, 60, 0.08);
   color: var(--gold-light);
 }
-
-/* Corner decorations — hextech style */
 .corner-decor {
   position: relative;
 }
@@ -150,8 +133,6 @@ body {
   right: -1px;
   border-width: 2px 2px 0 0;
 }
-
-/* Subtle gold glow animation */
 @keyframes pulse-gold {
   0%,
   100% {
@@ -161,8 +142,6 @@ body {
     box-shadow: 0 0 20px rgba(200, 170, 110, 0.25);
   }
 }
-
-/* Scan ring animation */
 @keyframes scan-ring {
   0% {
     transform: scale(0.8);
@@ -177,8 +156,6 @@ body {
 .animate-scan-ring {
   animation: scan-ring 2s ease-out infinite;
 }
-
-/* Background with subtle radial glow */
 .rift-bg {
   background: radial-gradient(
     ellipse at 50% 0%,

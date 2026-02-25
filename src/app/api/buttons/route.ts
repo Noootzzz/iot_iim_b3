@@ -13,7 +13,6 @@ const VALID_ACTIONS: ButtonAction[] = [
   "back",
 ];
 
-// POST /api/buttons — Called by the Raspberry Pi when a physical button is pressed
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -41,7 +40,6 @@ export async function POST(request: NextRequest) {
       timestamp: Date.now(),
     };
 
-    // Broadcast to all SSE clients listening for this machineId
     buttonEmitter.emit("button", event);
 
     return NextResponse.json({ success: true, event });

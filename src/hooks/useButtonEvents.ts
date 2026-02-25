@@ -3,11 +3,6 @@
 import { useEffect } from "react";
 import type { ButtonAction } from "@/lib/button-emitter";
 
-/**
- * Hook that listens for physical button events via SSE.
- * @param onButtonPress - Callback fired with the action when a button is pressed
- * @param machineId - The screen/borne identifier to filter events
- */
 export function useButtonEvents(
   onButtonPress: (action: ButtonAction) => void,
   machineId?: string | null,

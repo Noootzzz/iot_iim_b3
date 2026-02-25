@@ -63,7 +63,6 @@ function HomeContent() {
     }
   }, [p1Id, p2Id, s1Id, s2Id, router, borne]);
 
-  // SSE listener pour attendre la résolution de la demande d'inscription
   useEffect(() => {
     if (!pendingRequest) return;
 
@@ -75,13 +74,10 @@ function HomeContent() {
       const data = JSON.parse(event.data);
 
       if (data.status === "approved" && data.user && data.scanId) {
-        // Compte créé ! On ajoute le joueur au lobby
         const borneStr = borne ? `&borne=${borne}` : "";
 
         if (pendingRequest.slot === "1") {
-          router.push(
-            `/?p1=${data.user.id}&scan1=${data.scanId}${borneStr}`,
-          );
+          router.push(`/?p1=${data.user.id}&scan1=${data.scanId}${borneStr}`);
         } else {
           router.push(
             `/?p1=${p1Id}&scan1=${s1Id}&p2=${data.user.id}&scan2=${data.scanId}${borneStr}`,
@@ -107,7 +103,6 @@ function HomeContent() {
 
   const handleScan = async (scan: any) => {
     if (!scan.known || !scan.user) {
-      // Badge inconnu → Créer une demande d'inscription pour l'admin
       const targetSlot: "1" | "2" = !p1Id ? "1" : "2";
 
       try {
@@ -154,14 +149,12 @@ function HomeContent() {
   useRfidPolling(handleScan, borne);
 
   return (
-    <div className="w-[800px] h-[480px] rift-bg flex flex-col items-center justify-center relative">
-      {/* Top gold line */}
+    <div className="w-full min-h-screen rift-bg flex flex-col items-center justify-center relative px-4">
       <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-[#c8aa6e]/40 to-transparent" />
 
-      {/* ─── OVERLAY : En attente de l'admin ─── */}
       {pendingRequest && (
         <div className="absolute inset-0 z-50 bg-[#010a13]/90 backdrop-blur-sm flex flex-col items-center justify-center">
-          <div className="card-hextech corner-decor w-[380px] p-6 text-center">
+          <div className="card-hextech corner-decor w-full max-w-[380px] p-6 text-center">
             <div className="relative mx-auto w-14 h-14 mb-4">
               <span className="absolute inset-0 rounded-full border-2 border-[#c8aa6e]/30 animate-ping" />
               <div className="relative w-14 h-14 rounded-full bg-[#0a1628] border border-[#785a28] flex items-center justify-center">
@@ -193,7 +186,6 @@ function HomeContent() {
         </div>
       )}
 
-      {/* ─── Notification de rejet ─── */}
       {pendingRejected && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-[#e84057]/10 border border-[#e84057]/30 rounded-lg px-5 py-2.5 animate-fadeIn">
           <p className="text-[#e84057] text-xs font-display tracking-wider">
@@ -202,7 +194,6 @@ function HomeContent() {
         </div>
       )}
 
-      {/* Logo + Title */}
       <div className="flex flex-col items-center mb-5">
         <img
           src="/Riftbound_icon.png"
@@ -217,18 +208,15 @@ function HomeContent() {
         </p>
       </div>
 
-      {/* Divider */}
       <div className="w-40 h-px bg-linear-to-r from-transparent via-[#785a28] to-transparent mb-4" />
 
       <p className="text-[#a09b8c] text-xs mb-5">
         En attente de 2 invocateurs pour le combat...
       </p>
 
-      {/* Player cards */}
-      <div className="flex items-center gap-4 mb-6">
-        {/* Player 1 */}
+      <div className="flex flex-col sm:flex-row items-center gap-4 mb-6 w-full max-w-[560px]">
         <div
-          className={`w-[230px] card-hextech corner-decor rounded-lg px-5 py-4 transition-all duration-300 ${
+          className={`w-full sm:w-[230px] card-hextech corner-decor rounded-lg px-5 py-4 transition-all duration-300 ${
             player1
               ? "border-[#c8aa6e] shadow-[0_0_15px_rgba(200,170,110,0.1)]"
               : ""
@@ -245,7 +233,7 @@ function HomeContent() {
               {player1 ? (
                 <Shield className="w-4 h-4" />
               ) : (
-                <Users className="w-4 h-4" />            
+                <Users className="w-4 h-4" />
               )}
             </div>
             <div>
@@ -263,14 +251,12 @@ function HomeContent() {
           </div>
         </div>
 
-        {/* VS badge */}
         <div className="w-10 h-10 rounded-full bg-[#0a1628] border border-[#785a28]/50 flex items-center justify-center">
           <Swords className="w-4 h-4 text-[#785a28]" />
         </div>
 
-        {/* Player 2 */}
         <div
-          className={`w-[230px] card-hextech corner-decor rounded-lg px-5 py-4 transition-all duration-300 ${
+          className={`w-full sm:w-[230px] card-hextech corner-decor rounded-lg px-5 py-4 transition-all duration-300 ${
             player2
               ? "border-[#c8aa6e] shadow-[0_0_15px_rgba(200,170,110,0.1)]"
               : ""
@@ -306,7 +292,6 @@ function HomeContent() {
         </div>
       </div>
 
-      {/* Scan indicator */}
       <div className="flex items-center gap-2.5">
         <div className="relative flex items-center justify-center">
           <span className="absolute inline-flex h-6 w-6 rounded-full border border-[#c8aa6e]/30 animate-scan-ring"></span>
@@ -317,7 +302,6 @@ function HomeContent() {
         </p>
       </div>
 
-      {/* DEBUG: Lien temporaire */}
       <div className="mt-5">
         <button
           onClick={() => router.push("/game?mode=demo")}
@@ -327,7 +311,6 @@ function HomeContent() {
         </button>
       </div>
 
-      {/* Bottom gold line */}
       <div className="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-[#785a28]/30 to-transparent" />
     </div>
   );
@@ -337,7 +320,7 @@ export default function Home() {
   return (
     <Suspense
       fallback={
-        <div className="w-[800px] h-[480px] rift-bg flex items-center justify-center">
+        <div className="w-full min-h-screen rift-bg flex items-center justify-center">
           <p className="text-[#a09b8c] font-display tracking-widest text-sm">
             Chargement...
           </p>

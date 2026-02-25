@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // --- KPIs globaux ---
     const [usersCount] = await db
       .select({ count: count() })
       .from(users)
@@ -63,7 +62,6 @@ export async function GET(request: NextRequest) {
       })
       .from(gameSessions);
 
-    // --- Parties aujourd'hui ---
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -72,7 +70,6 @@ export async function GET(request: NextRequest) {
       .from(gameSessions)
       .where(gte(gameSessions.endedAt, todayStart));
 
-    // --- Parties cette semaine ---
     const weekStart = new Date();
     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     weekStart.setHours(0, 0, 0, 0);
@@ -82,13 +79,11 @@ export async function GET(request: NextRequest) {
       .from(gameSessions)
       .where(gte(gameSessions.endedAt, weekStart));
 
-    // --- Nouveaux joueurs cette semaine ---
     const [newUsersWeek] = await db
       .select({ count: count() })
       .from(users)
       .where(and(eq(users.role, "user"), gte(users.createdAt, weekStart)));
 
-    // --- Parties par jour (7 derniers jours) ---
     const sessionsPerDay = await db
       .select({
         day: sql<string>`TO_CHAR(ended_at, 'YYYY-MM-DD')`,
@@ -104,7 +99,6 @@ export async function GET(request: NextRequest) {
       .groupBy(sql`TO_CHAR(ended_at, 'YYYY-MM-DD')`)
       .orderBy(sql`TO_CHAR(ended_at, 'YYYY-MM-DD')`);
 
-    // --- Score moyen par partie ---
     const avgScorePerGame = await db
       .select({
         avg: sql<number>`ROUND(AVG(player1_score + player2_score), 1)`,

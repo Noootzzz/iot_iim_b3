@@ -3,8 +3,6 @@ import { registrationEmitter } from "@/lib/registration-emitter";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/registration-requests/admin-stream
-// SSE pour l'admin — reçoit les nouvelles demandes d'inscription en temps réel
 export async function GET(request: NextRequest) {
   const stream = new ReadableStream({
     start(controller) {

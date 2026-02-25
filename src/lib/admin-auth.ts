@@ -1,5 +1,3 @@
-// Helper functions for admin session tokens
-// Uses Web Crypto API (~no extra dependencies, edge-compatible)
 
 const COOKIE_NAME = "admin_session";
 const TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours

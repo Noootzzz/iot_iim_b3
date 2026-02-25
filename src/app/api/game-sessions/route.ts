@@ -3,7 +3,6 @@ import { db } from "@/db";
 import { gameSessions, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 
-// POST /api/game-sessions — Enregistrer une session de jeu terminée
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -46,7 +45,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/game-sessions — Récupérer les sessions récentes
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing scanId" }, { status: 400 });
     }
 
-    // Révoquer le scan (invalider la session)
     await db
       .update(scans)
       .set({ revoked: true })

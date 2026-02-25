@@ -1,6 +1,5 @@
 import { EventEmitter } from "events";
 
-// Persist across HMR in dev mode (same pattern as scan-emitter)
 const globalForEmitter = globalThis as unknown as {
   __buttonEmitter?: EventEmitter;
 };
@@ -12,7 +11,6 @@ buttonEmitter.setMaxListeners(100);
 
 globalForEmitter.__buttonEmitter = buttonEmitter;
 
-// Button action types
 export type ButtonAction =
   | "increment_p1"
   | "increment_p2"

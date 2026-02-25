@@ -19,7 +19,6 @@ import {
   Loader2,
 } from "lucide-react";
 
-// ─── Types ───────────────────────────────────────────────────
 interface AdminUser {
   id: string;
   username: string;
@@ -71,7 +70,6 @@ interface RegistrationRequest {
 
 type Tab = "overview" | "users" | "sessions" | "requests";
 
-// ─── Helpers ─────────────────────────────────────────────────
 function fmt(s: number) {
   const m = Math.floor(s / 60);
   const sec = s % 60;
@@ -106,7 +104,6 @@ function timeAgo(d: string | null) {
   return `${Math.floor(s / 86400)}j`;
 }
 
-/** Compute per-day counts from sessions (client-side, no API dependency) */
 function buildDailyCounts(sessions: AdminSession[], days: number) {
   const buckets: Record<string, number> = {};
   const labels: { key: string; short: string }[] = [];
@@ -130,7 +127,6 @@ function buildDailyCounts(sessions: AdminSession[], days: number) {
   return labels.map((l) => ({ label: l.short, count: buckets[l.key] }));
 }
 
-// ─── Main ────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
@@ -139,7 +135,9 @@ export default function AdminDashboard() {
   const [allSessions, setAllSessions] = useState<AdminSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [pendingRequests, setPendingRequests] = useState<RegistrationRequest[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<RegistrationRequest[]>(
+    [],
+  );
 
   const fetchAll = useCallback(async () => {
     try {
@@ -155,12 +153,13 @@ export default function AdminDashboard() {
         return;
       }
 
-      const [statsData, usersData, sessionsData, requestsData] = await Promise.all([
-        statsRes.json(),
-        usersRes.json(),
-        sessionsRes.json(),
-        requestsRes.json(),
-      ]);
+      const [statsData, usersData, sessionsData, requestsData] =
+        await Promise.all([
+          statsRes.json(),
+          usersRes.json(),
+          sessionsRes.json(),
+          requestsRes.json(),
+        ]);
 
       setStats(statsData.stats);
       setAllUsers(usersData.users || []);
@@ -177,16 +176,16 @@ export default function AdminDashboard() {
     fetchAll();
   }, [fetchAll]);
 
-  // SSE : écoute les nouvelles demandes d'inscription en temps réel
   useEffect(() => {
-    const eventSource = new EventSource("/api/registration-requests/admin-stream");
+    const eventSource = new EventSource(
+      "/api/registration-requests/admin-stream",
+    );
 
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === "new-request" && data.request) {
           setPendingRequests((prev) => {
-            // Éviter les doublons
             if (prev.some((r) => r.id === data.request.id)) return prev;
             return [...prev, data.request];
           });
@@ -330,7 +329,6 @@ export default function AdminDashboard() {
   );
 }
 
-// ─── OVERVIEW ────────────────────────────────────────────────
 function OverviewTab({
   stats,
   users,
@@ -359,7 +357,6 @@ function OverviewTab({
 
   return (
     <div className="space-y-8">
-      {/* KPIs */}
       <div className="grid grid-cols-4 gap-px bg-neutral-200 rounded-lg overflow-hidden">
         {[
           {
@@ -416,7 +413,6 @@ function OverviewTab({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Chart */}
         <div className="lg:col-span-3">
           <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-3">
             7 derniers jours
@@ -454,7 +450,6 @@ function OverviewTab({
           </div>
         </div>
 
-        {/* Top 5 */}
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
@@ -520,7 +515,6 @@ function OverviewTab({
         </div>
       </div>
 
-      {/* Recent */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
@@ -580,7 +574,6 @@ function OverviewTab({
   );
 }
 
-// ─── USERS ───────────────────────────────────────────────────
 function UsersTab({
   users,
   onRefresh,
@@ -857,7 +850,6 @@ function UsersTab({
   );
 }
 
-// ─── SESSIONS ────────────────────────────────────────────────
 function SessionsTab({
   sessions,
   users,
@@ -1105,7 +1097,6 @@ function SessionsTab({
   );
 }
 
-// ─── REGISTRATION REQUESTS ──────────────────────────────────
 function RegistrationRequestsTab({
   requests,
   onRefresh,
@@ -1120,8 +1111,7 @@ function RegistrationRequestsTab({
   const [msg, setMsg] = useState("");
   const [error, setError] = useState<Record<number, string>>({});
 
-  const getForm = (id: number) =>
-    formData[id] || { username: "", email: "" };
+  const getForm = (id: number) => formData[id] || { username: "", email: "" };
 
   const updateForm = (
     id: number,
@@ -1233,9 +1223,7 @@ function RegistrationRequestsTab({
       {requests.length === 0 ? (
         <div className="bg-white border border-neutral-200 rounded-lg p-8 text-center">
           <UserPlus className="w-8 h-8 text-neutral-200 mx-auto mb-2" />
-          <p className="text-neutral-400 text-sm">
-            Aucune demande en attente
-          </p>
+          <p className="text-neutral-400 text-sm">Aucune demande en attente</p>
           <p className="text-neutral-300 text-xs mt-1">
             Les nouvelles demandes apparaîtront ici en temps réel
           </p>

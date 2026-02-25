@@ -11,7 +11,6 @@ async function requireAdmin(request: NextRequest) {
   return payload?.role === "admin";
 }
 
-// GET /api/admin/sessions — Toutes les sessions avec noms des joueurs
 export async function GET(request: NextRequest) {
   if (!(await requireAdmin(request))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -58,7 +57,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PUT /api/admin/sessions — Modifier une session (scores, gagnant)
 export async function PUT(request: NextRequest) {
   if (!(await requireAdmin(request))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -101,7 +99,6 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE /api/admin/sessions — Supprimer une session
 export async function DELETE(request: NextRequest) {
   if (!(await requireAdmin(request))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });

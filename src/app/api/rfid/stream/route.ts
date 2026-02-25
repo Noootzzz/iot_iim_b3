@@ -10,7 +10,6 @@ export async function GET(request: NextRequest) {
     start(controller) {
       const encoder = new TextEncoder();
 
-      // Send a keep-alive comment every 15s to prevent proxy/browser timeout
       const keepAlive = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(": keep-alive\n\n"));
@@ -26,14 +25,12 @@ export async function GET(request: NextRequest) {
         known: boolean;
         user: unknown | null;
       }) => {
-        // Filter by machineId if specified
         if (machineId && scan.machineId !== machineId) return;
 
         try {
           const data = JSON.stringify({ scan });
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
         } catch {
-          // Client disconnected
           cleanup();
         }
       };
@@ -44,13 +41,11 @@ export async function GET(request: NextRequest) {
         try {
           controller.close();
         } catch {
-          // Already closed
         }
       };
 
       scanEmitter.on("scan", onScan);
 
-      // Clean up when the client disconnects
       request.signal.addEventListener("abort", cleanup);
     },
   });

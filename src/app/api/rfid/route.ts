@@ -6,7 +6,6 @@ import { scanEmitter } from "@/lib/scan-emitter";
 
 const IOT_SECRET = process.env.IOT_SECRET || "CHANGE_ME_IN_PROD";
 
-// POST /api/rfid - Webhook appelé par le Raspberry Pi
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -29,7 +28,6 @@ export async function POST(request: NextRequest) {
       where: eq(users.rfidUuid, rfidUuid),
     });
 
-    // Notify all SSE clients instantly
     scanEmitter.emit("scan", {
       id: inserted.id,
       rfidUuid: inserted.rfidUuid,
@@ -38,7 +36,6 @@ export async function POST(request: NextRequest) {
       user: existingUser || null,
     });
 
-    // Mark as consumed immediately (SSE already delivered it)
     await db
       .update(scans)
       .set({ consumed: true })

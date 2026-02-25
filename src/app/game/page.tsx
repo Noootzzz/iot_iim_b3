@@ -2,15 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import {
-  LogOut,
-  Timer,
-  Plus,
-  Minus,
-  Crown,
-  Swords,
-  Shield,
-} from "lucide-react";
+import { Timer, Plus, Minus, Crown, Swords, Shield } from "lucide-react";
 import { useButtonEvents } from "@/hooks/useButtonEvents";
 import type { ButtonAction } from "@/lib/button-emitter";
 
@@ -43,9 +35,7 @@ function GameContent() {
   const [elapsed, setElapsed] = useState(0);
   const [winner, setWinner] = useState<User | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<Date | null>(null);
 
-  // --- LOGOUT (useCallback so physical buttons can reference it) ---
   const handleLogout = useCallback(async () => {
     if (!isDemo) {
       if (scanId)
@@ -64,10 +54,8 @@ function GameContent() {
     router.push(borne ? `/?borne=${borne}` : "/");
   }, [isDemo, scanId, scan2Id, router, borne]);
 
-  // --- PHYSICAL BUTTON HANDLING ---
   const handleButtonPress = useCallback(
     (action: ButtonAction) => {
-      // When game is finished, ANY button press returns to lobby
       if (gameState === "FINISHED") {
         handleLogout();
         return;
@@ -96,15 +84,12 @@ function GameContent() {
     [gameState, handleLogout],
   );
 
-  // Listen for physical button events on this borne
   useButtonEvents(handleButtonPress, borne);
 
   useEffect(() => {
-    // --- DEMO MODE (temporaire) ---
     if (isDemo) {
       setUser({ id: "demo-1", username: "Player 1" });
       setPlayer2({ id: "demo-2", username: "Player 2" });
-      startTimeRef.current = new Date();
       setGameState("PLAYING");
       return;
     }
@@ -124,7 +109,6 @@ function GameContent() {
         const [data1, data2] = await Promise.all([res1.json(), res2.json()]);
         setUser(data1.user);
         setPlayer2(data2.user);
-        startTimeRef.current = new Date();
         setGameState("PLAYING");
       } catch (e) {
         console.error("Erreur auth:", e);
@@ -190,10 +174,9 @@ function GameContent() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  // --- LOADING ---
   if (gameState === "LOADING") {
     return (
-      <div className="w-[800px] h-[480px] rift-bg flex items-center justify-center">
+      <div className="w-full min-h-screen rift-bg flex items-center justify-center">
         <div className="text-center space-y-3">
           <img
             src="/Riftbound_icon.png"
@@ -208,20 +191,16 @@ function GameContent() {
     );
   }
 
-  // --- FINISHED ---
   if (gameState === "FINISHED") {
     return (
-      <div className="w-[800px] h-[480px] rift-bg flex items-center justify-center relative">
-        {/* Top line */}
+      <div className="w-full min-h-screen rift-bg flex items-center justify-center relative px-4">
         <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-[#c8aa6e]/40 to-transparent" />
 
-        <div className="w-[480px] text-center space-y-5">
-          {/* Crown */}
+        <div className="w-full max-w-[480px] text-center space-y-5">
           <div className="inline-flex p-4 rounded-full bg-linear-to-b from-[#c89b3c]/15 to-transparent border border-[#785a28]/40">
             <Crown className="w-8 h-8 text-[#c8aa6e] drop-shadow-[0_0_10px_rgba(200,170,110,0.3)]" />
           </div>
 
-          {/* Winner */}
           <div>
             <p className="text-[10px] font-display text-[#785a28] uppercase tracking-[0.3em] mb-1">
               Victoire
@@ -231,7 +210,6 @@ function GameContent() {
             </h2>
           </div>
 
-          {/* Scores */}
           <div className="flex items-center justify-center gap-6">
             <div className="text-center">
               <p className="text-[10px] text-[#a09b8c] mb-1 font-display uppercase tracking-wider">
@@ -264,7 +242,6 @@ function GameContent() {
             </div>
           </div>
 
-          {/* Duration */}
           <div className="flex items-center justify-center gap-1.5 text-[#5b5a56]">
             <Timer className="w-3 h-3" />
             <span className="text-xs font-display tracking-wider">
@@ -272,7 +249,6 @@ function GameContent() {
             </span>
           </div>
 
-          {/* Return button */}
           <button
             onClick={handleLogout}
             className="btn-lol px-8 py-2.5 rounded-md flex items-center justify-center gap-2 mx-auto"
@@ -286,7 +262,6 @@ function GameContent() {
           </p>
         </div>
 
-        {/* Borne indicator */}
         {borne && (
           <div className="absolute bottom-3 right-4">
             <span className="text-[9px] text-[#5b5a56]/60 font-mono tracking-wider">
@@ -295,18 +270,14 @@ function GameContent() {
           </div>
         )}
 
-        {/* Bottom line */}
         <div className="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-[#785a28]/30 to-transparent" />
       </div>
     );
   }
 
-  // --- PLAYING ---
   return (
-    <div className="w-[800px] h-[480px] rift-bg text-[#f0e6d2] flex flex-col overflow-hidden relative">
-      {/* Header */}
+    <div className="w-full min-h-screen rift-bg text-[#f0e6d2] flex flex-col overflow-hidden relative">
       <header className="bg-[#010a13]/80 backdrop-blur-sm border-b border-[#785a28]/30 px-4 py-2 flex items-center justify-center relative shrink-0">
-        {/* Logo left */}
         <div className="absolute left-4 flex items-center gap-2">
           <img
             src="/Riftbound_icon.png"
@@ -323,7 +294,6 @@ function GameContent() {
           )}
         </div>
 
-        {/* Timer centered */}
         <div className="flex items-center gap-1.5 bg-[#010a13] border border-[#785a28]/40 px-4 py-1 rounded-full">
           <Timer className="w-3 h-3 text-[#785a28]" />
           <span className="text-sm font-mono font-bold text-[#c8aa6e] tracking-wider">
@@ -332,7 +302,6 @@ function GameContent() {
         </div>
       </header>
 
-      {/* Score target */}
       <div className="bg-[#010a13]/50 border-b border-[#785a28]/15 py-1 text-center shrink-0">
         <p className="text-[9px] text-[#5b5a56] uppercase tracking-[0.3em] font-display">
           Premier à <span className="text-[#c8aa6e]">{WINNING_SCORE}</span>{" "}
@@ -340,19 +309,15 @@ function GameContent() {
         </p>
       </div>
 
-      {/* Game area — split screen */}
       <main className="flex-1 grid grid-cols-2 gap-0 relative min-h-0">
-        {/* VS divider */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
           <div className="w-10 h-10 rounded-full bg-[#010a13] border border-[#785a28]/50 flex items-center justify-center shadow-[0_0_20px_rgba(1,10,19,0.8)]">
             <Swords className="w-4 h-4 text-[#785a28]" />
           </div>
         </div>
 
-        {/* Vertical divider */}
         <div className="absolute top-0 bottom-0 left-1/2 w-px -translate-x-1/2 bg-linear-to-b from-[#785a28]/30 via-[#785a28]/10 to-[#785a28]/30 z-0" />
 
-        {/* Player 1 — Gold */}
         <div className="flex flex-col items-center justify-center p-4 relative">
           <p className="text-[10px] font-display text-[#785a28] uppercase tracking-[0.25em] mb-1">
             Invocateur I
@@ -381,7 +346,6 @@ function GameContent() {
           </div>
         </div>
 
-        {/* Player 2 — Teal */}
         <div className="flex flex-col items-center justify-center p-4 relative">
           <p className="text-[10px] font-display text-[#0ac8b9]/40 uppercase tracking-[0.25em] mb-1">
             Invocateur II
@@ -411,7 +375,6 @@ function GameContent() {
         </div>
       </main>
 
-      {/* Progress bar */}
       <div className="h-1 bg-[#010a13] flex shrink-0">
         <div
           className="bg-linear-to-r from-[#785a28] to-[#c8aa6e] transition-all duration-300"
@@ -430,7 +393,7 @@ export default function GamePage() {
   return (
     <Suspense
       fallback={
-        <div className="w-[800px] h-[480px] rift-bg flex items-center justify-center">
+        <div className="w-full min-h-screen rift-bg flex items-center justify-center">
           <p className="text-[#a09b8c] font-display tracking-widest text-sm">
             Chargement...
           </p>

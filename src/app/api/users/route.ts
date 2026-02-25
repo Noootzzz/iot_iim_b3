@@ -3,16 +3,11 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-// GET /api/users
-// Mode 1 : Si ?id=1 est présent -> Renvoie UN utilisateur
-// Mode 2 : Sinon -> Renvoie TOUS les utilisateurs
 export async function GET(request: NextRequest) {
   try {
-    // Récupérer les paramètres d'URL
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
-    // --- CAS 1 : Recherche par ID (pour la page Game) ---
     if (id) {
       const result = await db
         .select()
@@ -27,11 +22,9 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // On renvoie l'objet user directement
       return NextResponse.json({ user: result[0] });
     }
 
-    // --- CAS 2 : Récupérer tout le monde (Comportement par défaut) ---
     const allUsers = await db.select().from(users);
     return NextResponse.json({ users: allUsers });
   } catch (error) {
@@ -40,13 +33,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/users - Créer un utilisateur
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, email, rfidUuid } = body;
 
-    // Validation (pseudo obligatoire, email optionnel)
     if (!username) {
       return NextResponse.json(
         { error: "Le pseudo est requis" },
@@ -54,7 +45,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier si le pseudo existe déjà
     const existingName = await db
       .select()
       .from(users)
@@ -68,7 +58,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier si l'email existe déjà (si fourni)
     if (email) {
       const existingEmail = await db
         .select()
@@ -84,7 +73,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Vérifier si l'UUID est déjà lié
     if (rfidUuid) {
       const existingRfid = await db
         .select()
@@ -122,7 +110,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT /api/users - Mettre à jour un utilisateur
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();

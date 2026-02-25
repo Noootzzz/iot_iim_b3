@@ -4,16 +4,12 @@ import { registrationRequests } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { registrationEmitter } from "@/lib/registration-emitter";
 
-// POST — L'admin rejette une demande d'inscription
 export async function POST(request: NextRequest) {
   try {
     const { requestId } = await request.json();
 
     if (!requestId) {
-      return NextResponse.json(
-        { error: "requestId requis" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "requestId requis" }, { status: 400 });
     }
 
     const [regRequest] = await db
@@ -44,7 +40,6 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(registrationRequests.id, Number(requestId)));
 
-    // Notifier la borne via SSE
     registrationEmitter.emit(`request-resolved:${requestId}`, {
       status: "rejected",
     });
